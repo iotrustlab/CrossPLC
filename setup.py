@@ -36,6 +36,7 @@ setup(
         "console_scripts": [
             "l5x2st=l5x_st_compiler.cli:l5x2st_main",
             "st2l5x=l5x_st_compiler.cli:st2l5x_main",
+            "l5k-overlay-validate=examples.validate_l5k_overlay_diff:main",
         ],
     },
     include_package_data=True,

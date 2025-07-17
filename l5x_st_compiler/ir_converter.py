@@ -15,6 +15,7 @@ from .models import (
 from .utils import extract_tag_info, get_data_type
 from .ladder_logic import translate_ladder_to_st
 from .fbd_translator import translate_fbd_to_st
+from .l5k_overlay import L5KOverlay
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,17 @@ class IRConverter:
         )
         self.component_mappings: List[ComponentMapping] = []
     
-    def l5x_to_ir(self, project) -> IRProject:
-        """Convert L5X project to Intermediate Representation."""
+    def l5x_to_ir(self, project, l5k_overlay_path: Optional[str] = None) -> IRProject:
+        """
+        Convert L5X project to Intermediate Representation.
+        
+        Args:
+            project: L5X project object
+            l5k_overlay_path: Optional path to L5K file for additional context
+            
+        Returns:
+            IR project with optional L5K overlay applied
+        """
         logger.info("Converting L5X to Intermediate Representation")
         
         # Extract controller information
@@ -49,6 +59,17 @@ class IRConverter:
                 "conversion_time": self.conversion_metadata.conversion_time
             }
         )
+        
+        # Apply L5K overlay if provided
+        if l5k_overlay_path:
+            try:
+                logger.info(f"Applying L5K overlay from: {l5k_overlay_path}")
+                l5k_overlay = L5KOverlay(l5k_overlay_path)
+                ir_project = l5k_overlay.apply_to_ir(ir_project)
+                logger.info("L5K overlay applied successfully")
+            except Exception as e:
+                logger.warning(f"Failed to apply L5K overlay: {e}")
+                # Continue without overlay if it fails
         
         # Update metadata
         self.conversion_metadata.original_components = {

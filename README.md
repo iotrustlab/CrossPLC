@@ -1,6 +1,6 @@
 # L5X-ST Compiler
 
-A modern Python 3 implementation for converting between L5X files (Allen Bradley/Rockwell Automation) and Structured Text (ST) format. This project builds upon the original L5X parser and provides a clean, modular, and testable codebase with **complete round-trip conversion** and **IR validation**.
+A modern Python 3 implementation for converting between L5X files (Allen Bradley/Rockwell Automation) and Structured Text (ST) format. This project builds upon the original L5X parser and provides a clean, modular, and testable codebase with **complete round-trip conversion**, **IR validation**, and **L5K overlay support**.
 
 ## Features
 
@@ -14,6 +14,7 @@ A modern Python 3 implementation for converting between L5X files (Allen Bradley
 - Message instruction handling
 - Timer function block support
 - **IR validation mode** with guardrails
+- **L5K overlay support** for enhanced project context
 
 ### Structured Text to L5X (ST2L5X)
 - Convert ST files back to L5X format
@@ -23,12 +24,21 @@ A modern Python 3 implementation for converting between L5X files (Allen Bradley
 - Support for struct declarations
 - **IR validation mode** with fidelity scoring
 
+### L5K Overlay System
+- **Enhanced Project Context**: Extract missing project-level information from L5K files
+- **Global and Controller Tags**: Complete tag definitions with data types and initial values
+- **Task and Program Mapping**: Execution order and program-to-task bindings
+- **Module Configurations**: Hardware module settings and I/O configurations
+- **User-Defined Data Types**: Complete UDT definitions with nested structures
+- **Initial Tag Values**: Default values for all tags in the project
+
 ### Advanced Features
 - **Complete Round-Trip Conversion**: L5X ↔ ST ↔ L5X with validation
 - **Intermediate Representation (IR)**: Internal data model for validation
 - **Fidelity Scoring**: Quantitative measurement of conversion quality
 - **Guardrail Validation**: Optional `--use-ir` flag for enhanced validation
 - **Industrial-Grade Reliability**: Handles complex Rockwell automation projects
+- **Metadata Comparison**: Tools to analyze differences between overlay and non-overlay conversions
 
 ## Installation
 
@@ -64,6 +74,30 @@ python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --use-ir
 python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st -v
 ```
 
+#### Convert L5X to ST with L5K Overlay
+```bash
+# Convert with L5K overlay for enhanced context
+python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K
+
+# With IR validation and L5K overlay
+python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K --use-ir
+
+# With verbose output and overlay
+python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K -v
+```
+
+#### Validate L5K Overlay Differences
+```bash
+# Compare IR with and without L5K overlay
+python examples/validate_l5k_overlay_diff.py -i project.L5X -l project.L5K
+
+# Generate JSON report
+python examples/validate_l5k_overlay_diff.py -i project.L5X -l project.L5K --json
+
+# Compare multiple projects
+python examples/validate_l5k_overlay_diff.py -i project1.L5X -l project1.L5K -i project2.L5X -l project2.L5K
+```
+
 #### Convert ST to L5X
 ```bash
 # Convert single file
@@ -92,17 +126,19 @@ st_file = converter.parse_l5x_file("project.L5X")
 print(str(st_file))
 ```
 
-#### ST to L5X Conversion
+#### L5K Overlay Integration
 ```python
-from l5x_st_compiler import ST2L5XConverter
+from l5x_st_compiler import L5X2STConverter
+from l5x_st_compiler.l5k_overlay import L5KOverlay
 
-converter = ST2L5XConverter()
+# Load L5K overlay for enhanced context
+overlay = L5KOverlay()
+overlay.load_l5k_file("project.L5K")
 
-# Convert single file
-converter.convert_file("program.st", "output.L5X")
-
-# Parse and get L5XElement object
-l5x_project = converter.parse_st_file("program.st")
+# Convert with overlay
+converter = L5X2STConverter()
+st_file = converter.parse_l5x_file("project.L5X", overlay=overlay)
+print(str(st_file))
 ```
 
 #### IR Validation and Round-Trip
@@ -130,6 +166,29 @@ fidelity_score = ir_converter.calculate_fidelity_score(original_ir, final_ir)
 print(f"Round-trip fidelity: {fidelity_score:.2%}")
 ```
 
+#### IR Comparison and Analysis
+```python
+from l5x_st_compiler.ir_converter import IRConverter
+from l5x_st_compiler.l5k_overlay import L5KOverlay
+
+# Compare IR with and without overlay
+ir_converter = IRConverter()
+overlay = L5KOverlay()
+overlay.load_l5k_file("project.L5K")
+
+# Generate IR without overlay
+ir_without = ir_converter.l5x_to_ir("project.L5X")
+
+# Generate IR with overlay
+ir_with = ir_converter.l5x_to_ir("project.L5X", overlay=overlay)
+
+# Analyze differences
+diff_report = ir_converter.compare_ir(ir_without, ir_with)
+print(f"Tags added: {diff_report['tags_added']}")
+print(f"Tasks added: {diff_report['tasks_added']}")
+print(f"Modules added: {diff_report['modules_added']}")
+```
+
 ## Project Structure
 
 ```
@@ -143,6 +202,7 @@ l5x2ST/
 │   ├── ladder_logic.py       # Ladder logic translator
 │   ├── fbd_translator.py     # FBD to ST translator
 │   ├── ir_converter.py       # IR conversion system
+│   ├── l5k_overlay.py        # L5K file parser and overlay system
 │   ├── l5x2st.py            # L5X to ST converter
 │   ├── st2l5x.py            # ST to L5X converter
 │   └── cli.py               # Command-line interface
@@ -151,10 +211,14 @@ l5x2ST/
 │   ├── complex_st_example.py # Complex ST example
 │   ├── ir_roundtrip_test.py # IR round-trip testing
 │   ├── l5x_compare.py       # L5X comparison tool
+│   ├── l5x_roundtrip_test.py # L5X round-trip testing
+│   ├── l5k_overlay_example.py # L5K overlay usage examples
+│   ├── validate_l5k_overlay_diff.py # Overlay difference analysis
 │   └── validation_test.py   # Comprehensive validation
 ├── tests/                    # Test suite
 │   ├── __init__.py
-│   └── test_l5x2st.py       # Tests for L5X2ST converter
+│   ├── test_l5x2st.py       # Tests for L5X2ST converter
+│   └── test_l5k_overlay.py  # Tests for L5K overlay system
 ├── requirements.txt          # Python dependencies
 ├── setup.py                  # Package setup
 ├── pytest.ini               # Pytest configuration
@@ -177,8 +241,17 @@ pytest tests/test_l5x2st.py
 # Run with verbose output
 pytest -v
 
+# Run L5K overlay tests
+pytest tests/test_l5k_overlay.py
+
 # Run validation test suite
 python examples/validation_test.py
+
+# Test L5K overlay functionality
+python examples/l5k_overlay_example.py
+
+# Validate overlay differences
+python examples/validate_l5k_overlay_diff.py -i sampledata/swatfiles/P1.L5X -l sampledata/swatfiles/P1.L5K
 ```
 
 ### Code Quality
@@ -234,10 +307,38 @@ pip install dist/l5x-st-compiler-2.0.0.tar.gz
 - **API Support**: Programmatic access to converters
 - **IR Validation**: Guardrail system for conversion quality
 - **Fidelity Scoring**: Quantitative measurement of round-trip accuracy
+- **L5K Overlay**: Enhanced project context from L5K files
+- **Metadata Analysis**: Tools for comparing conversion differences
+
+## L5K Overlay System
+
+The L5K overlay system enhances L5X to ST conversion by extracting additional project context from L5K files. This provides:
+
+### Enhanced Context
+- **Global Tags**: Controller-scoped tags with complete definitions
+- **Task Definitions**: Execution order and timing information
+- **Program Mappings**: Which programs run in which tasks
+- **Module Configurations**: Hardware I/O settings and configurations
+- **User-Defined Data Types**: Complete UDT definitions with nested structures
+- **Initial Values**: Default values for all tags in the project
+
+### Benefits
+- **More Complete ST Output**: Includes system-level context and configurations
+- **Better Round-Trip Fidelity**: Preserves more project metadata
+- **Enhanced Debugging**: Complete tag definitions with initial values
+- **System Integration**: Task and program execution information
+- **Hardware Context**: Module configurations and I/O settings
+
+### Usage Examples
+```bash
+# Basic overlay usage
+python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K
+
+# Compare with and without overlay
+python examples/validate_l5k_overlay_diff.py -i project.L5X -l project.L5K
+```
 
 ## Supported Instructions
-
-The compiler supports a comprehensive set of Rockwell Automation instructions. For the complete instruction reference, see the official [Logix 5000 Controllers General Instructions](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm003_-en-p.pdf) manual.
 
 ### Currently Supported Categories
 - **Bit Instructions**: XIC, XIO, OTE, OTL, OTU, ONS, OSR, OSF, OSRI, OSFI

@@ -66,6 +66,12 @@ Examples:
     )
     
     parser.add_argument(
+        '--l5k-overlay',
+        metavar='L5K_FILE',
+        help='L5K file to provide additional project context (tags, tasks, programs, modules)'
+    )
+    
+    parser.add_argument(
         '--verbose', '-v',
         action='store_true',
         help='Enable verbose output'
@@ -90,11 +96,11 @@ Examples:
                 # L5X → IR → ST
                 import l5x
                 project = l5x.Project(args.input)
-                ir_project = ir_converter.l5x_to_ir(project)
+                ir_project = ir_converter.l5x_to_ir(project, args.l5k_overlay)
                 
                 # Generate ST from IR
                 l5x2st = L5X2STConverter()
-                st_code = l5x2st.convert_l5x_to_st(args.input)
+                st_code = l5x2st.convert_l5x_to_st(args.input, args.l5k_overlay)
                 
                 with open(args.output, 'w') as f:
                     f.write(st_code)
@@ -116,8 +122,13 @@ Examples:
                 
                 if args.verbose:
                     print(f"Converting {args.input} to {args.output}")
+                    if args.l5k_overlay:
+                        print(f"Using L5K overlay: {args.l5k_overlay}")
                 
-                converter.convert_file(args.input, args.output)
+                # Use the newer convert_l5x_to_st method instead of convert_file
+                st_code = converter.convert_l5x_to_st(args.input, args.l5k_overlay)
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(st_code)
                 
             elif args.directory:
                 # Convert directory

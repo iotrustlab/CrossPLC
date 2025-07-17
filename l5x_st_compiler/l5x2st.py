@@ -123,7 +123,7 @@ class L5X2STConverter:
         
         for member_name in dtype:
             member = dtype[member_name]
-            member_type = member.getAttribute('DataType', 'BOOL')
+            member_type = getattr(member, 'DataType', 'BOOL')
             if member_type in UNIMPLEMENTED_TYPES:
                 member_type = UNIMPLEMENTED_TYPES[member_type]
             struct_def += f"\t\t{member_name}: {member_type};\n"
@@ -168,7 +168,7 @@ class L5X2STConverter:
             for tag_name in prj.controller.tags:
                 tag = prj.controller.tags[tag_name]
                 var_name = tag_name
-                dtype = tag.getAttribute('DataType', 'BOOL')
+                dtype = getattr(tag, 'DataType', 'BOOL')
                 
                 # Handle reserved words
                 if var_name in RESERVED_WORDS:
@@ -201,7 +201,7 @@ class L5X2STConverter:
                 for tag_name in main_prog.tags:
                     tag = main_prog.tags[tag_name]
                     var_name = tag_name
-                    dtype = tag.getAttribute('DataType', 'BOOL')
+                    dtype = getattr(tag, 'DataType', 'BOOL')
                     
                     # Handle reserved words
                     if var_name in RESERVED_WORDS:
@@ -255,8 +255,15 @@ class L5X2STConverter:
         
         return prog_block
     
-    def convert_file(self, input_file: str, output_file: str) -> None:
-        """Convert a single L5X file to ST."""
+    def convert_file(self, input_file: str, output_file: str, l5k_overlay_path: Optional[str] = None) -> None:
+        """
+        Convert a single L5X file to ST.
+        
+        Args:
+            input_file: Path to input L5X file
+            output_file: Path to output ST file
+            l5k_overlay_path: Optional path to L5K file for additional context
+        """
         st_file = self.parse_l5x_file(input_file)
         
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -269,12 +276,13 @@ class L5X2STConverter:
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(str(st_file))
 
-    def convert_l5x_to_st(self, l5x_file_path: str) -> str:
+    def convert_l5x_to_st(self, l5x_file_path: str, l5k_overlay_path: Optional[str] = None) -> str:
         """
         Convert an L5X file to Structured Text.
         
         Args:
             l5x_file_path: Path to the L5X file
+            l5k_overlay_path: Optional path to L5K file for additional context
             
         Returns:
             Generated ST code as string
@@ -283,40 +291,30 @@ class L5X2STConverter:
             # Parse L5X file
             project = l5x.Project(l5x_file_path)
             
-            # Debug: Print project structure
-            print(f"DEBUG: Project type: {type(project)}")
-            print(f"DEBUG: Project dir: {dir(project)}")
-            print(f"DEBUG: Project controller: {getattr(project, 'controller', None)}")
-            print(f"DEBUG: Project programs: {getattr(project, 'programs', None)}")
-            print(f"DEBUG: Project modules: {getattr(project, 'modules', None)}")
+            # Use IR converter for proper L5K overlay support
+            from .ir_converter import IRConverter
+            ir_converter = IRConverter()
             
-            # Extract controller information
-            controller = getattr(project, 'controller', None)
-            print(f"DEBUG: Controller type: {type(controller)}")
-            print(f"DEBUG: Controller dir: {dir(controller) if controller else None}")
+            # Convert to IR with optional L5K overlay
+            ir_project = ir_converter.l5x_to_ir(project, l5k_overlay_path)
             
-            # Extract tags
-            tags = self._extract_tags(project)
-            print(f"DEBUG: Extracted {len(tags)} tags")
+            # Debug: Print IR project structure
+            print(f"DEBUG: IR Project controller: {ir_project.controller.name}")
+            print(f"DEBUG: IR Project tags: {len(ir_project.controller.tags)}")
+            print(f"DEBUG: IR Project programs: {len(ir_project.programs)}")
+            print(f"DEBUG: IR Project tasks: {len(ir_project.tasks)}")
+            print(f"DEBUG: IR Project modules: {len(ir_project.modules)}")
             
-            # Extract data types
-            data_types = self._extract_data_types(project)
-            print(f"DEBUG: Extracted {len(data_types)} data types")
+            # Check if L5K overlay was applied
+            if l5k_overlay_path and ir_project.metadata.get('l5k_overlay_applied'):
+                print(f"DEBUG: L5K overlay applied successfully")
+                print(f"DEBUG: L5K tags added: {ir_project.metadata.get('l5k_tags_added', 0)}")
+                print(f"DEBUG: L5K tasks added: {ir_project.metadata.get('l5k_tasks_added', 0)}")
+                print(f"DEBUG: L5K programs added: {ir_project.metadata.get('l5k_programs_added', 0)}")
+                print(f"DEBUG: L5K modules added: {ir_project.metadata.get('l5k_modules_added', 0)}")
             
-            # Extract function blocks
-            function_blocks = self._extract_function_blocks(project)
-            print(f"DEBUG: Extracted {len(function_blocks)} function blocks")
-            
-            # Extract programs and routines
-            programs = self._extract_programs(project)
-            print(f"DEBUG: Extracted {len(programs)} programs")
-            
-            # Extract program logic
-            program_logic = extract_program_logic_from_xml(project)
-            print(f"DEBUG: Extracted program logic: {len(program_logic)} characters")
-            
-            # Generate ST code
-            st_code = self._generate_st_code(controller, tags, data_types, function_blocks, programs, program_logic)
+            # Generate ST code from IR
+            st_code = self._generate_st_from_ir(ir_project)
             
             return st_code
             
@@ -447,6 +445,155 @@ class L5X2STConverter:
             st_lines.extend(program_logic.split('\n'))
             st_lines.append("END_PROGRAM")
             st_lines.append("")
+        
+        return "\n".join(st_lines)
+    
+    def _generate_st_from_ir(self, ir_project) -> str:
+        """Generate Structured Text code from IR project."""
+        st_lines = []
+        
+        # Add header
+        st_lines.append("// Generated Structured Text Code")
+        st_lines.append("// Converted from L5X file")
+        if ir_project.metadata.get('l5k_overlay_applied'):
+            st_lines.append("// Enhanced with L5K overlay context")
+        st_lines.append("")
+        
+        # Add task definitions if available
+        if ir_project.tasks:
+            st_lines.append("// Task Definitions")
+            for task in ir_project.tasks:
+                task_name = task.get('name', 'UnknownTask')
+                task_type = task.get('type', 'CONTINUOUS')
+                priority = task.get('priority', 10)
+                watchdog = task.get('watchdog', 500)
+                interval = task.get('interval', '')
+                
+                st_lines.append(f"TASK {task_name} (Type := {task_type}, Priority := {priority}, Watchdog := {watchdog})")
+                if interval:
+                    st_lines.append(f"    Rate := {interval};")
+                st_lines.append("END_TASK")
+                st_lines.append("")
+        
+        # Add data type declarations
+        if ir_project.controller.data_types:
+            st_lines.append("// Data Type Declarations")
+            for dt in ir_project.controller.data_types:
+                st_lines.append(f"TYPE {dt.name} :")
+                st_lines.append("    STRUCT")
+                for member in dt.members:
+                    st_lines.append(f"        {member.name} : {member.data_type};")
+                st_lines.append("    END_STRUCT;")
+                st_lines.append("END_TYPE")
+                st_lines.append("")
+        
+        # Add variable declarations
+        if ir_project.controller.tags:
+            st_lines.append("// Variable Declarations")
+            st_lines.append("VAR")
+            for tag in ir_project.controller.tags:
+                # Add tag with enhanced information from L5K overlay
+                tag_line = f"    {tag.name} : {tag.data_type}"
+                if tag.initial_value:
+                    tag_line += f" := {tag.initial_value}"
+                tag_line += ";"
+                st_lines.append(tag_line)
+                
+                # Add description if available
+                if tag.description:
+                    st_lines.append(f"    // {tag.description}")
+                
+                # Add external access info if available
+                if tag.external_access:
+                    st_lines.append(f"    // External Access: {tag.external_access}")
+            st_lines.append("END_VAR")
+            st_lines.append("")
+        
+        # Add function blocks
+        if ir_project.controller.function_blocks:
+            st_lines.append("// Function Blocks")
+            for fb in ir_project.controller.function_blocks:
+                st_lines.append(f"FUNCTION_BLOCK {fb.name}")
+                
+                # Add input parameters
+                input_params = [p for p in fb.parameters if p.parameter_type == "Input"]
+                if input_params:
+                    st_lines.append("VAR_INPUT")
+                    for param in input_params:
+                        st_lines.append(f"    {param.name} : {param.data_type};")
+                    st_lines.append("END_VAR")
+                
+                # Add output parameters
+                output_params = [p for p in fb.parameters if p.parameter_type == "Output"]
+                if output_params:
+                    st_lines.append("VAR_OUTPUT")
+                    for param in output_params:
+                        st_lines.append(f"    {param.name} : {param.data_type};")
+                    st_lines.append("END_VAR")
+                
+                # Add local variables
+                if fb.local_variables:
+                    st_lines.append("VAR")
+                    for var in fb.local_variables:
+                        st_lines.append(f"    {var.name} : {var.data_type};")
+                    st_lines.append("END_VAR")
+                
+                # Add implementation
+                if fb.implementation:
+                    st_lines.append("// Implementation")
+                    st_lines.extend(fb.implementation.split('\n'))
+                
+                st_lines.append("END_FUNCTION_BLOCK")
+                st_lines.append("")
+        
+        # Add program logic
+        if ir_project.programs:
+            for program in ir_project.programs:
+                st_lines.append(f"// Program: {program.name}")
+                if program.description:
+                    st_lines.append(f"// Description: {program.description}")
+                
+                # Add task association if available
+                if hasattr(program, 'task_name') and program.task_name:
+                    st_lines.append(f"// Associated Task: {program.task_name}")
+                
+                st_lines.append(f"PROGRAM {program.name}")
+                st_lines.append("VAR")
+                st_lines.append("    // Program variables declared above")
+                st_lines.append("END_VAR")
+                st_lines.append("")
+                
+                # Add routines
+                for routine in program.routines:
+                    st_lines.append(f"// Routine: {routine.name} ({routine.routine_type.value})")
+                    if routine.description:
+                        st_lines.append(f"// {routine.description}")
+                    
+                    # Add routine content
+                    if routine.content:
+                        st_lines.extend(routine.content.split('\n'))
+                    
+                    st_lines.append("")
+                
+                st_lines.append("END_PROGRAM")
+                st_lines.append("")
+        
+        # Add module information if available
+        if ir_project.modules:
+            st_lines.append("// Module Configuration")
+            for module in ir_project.modules:
+                module_name = module.get('name', 'UnknownModule')
+                module_type = module.get('type', 'Unknown')
+                slot = module.get('slot', 0)
+                st_lines.append(f"MODULE {module_name} (Type := {module_type}, Slot := {slot})")
+                
+                # Add configuration if available
+                config = module.get('configuration', {})
+                for key, value in config.items():
+                    st_lines.append(f"    {key} := {value};")
+                
+                st_lines.append("END_MODULE")
+                st_lines.append("")
         
         return "\n".join(st_lines)
 
