@@ -27,6 +27,7 @@ class ExportComponent(Enum):
     INTERACTIONS = "interactions"
     ROUTINES = "routines"
     PROGRAMS = "programs"
+    SEMANTIC = "semantic"  # New semantic analysis component
 
 
 class ControlFlowAnalyzer:
@@ -347,6 +348,247 @@ class InteractionAnalyzer:
                 self.tag_references[tag_name].add(program_name)
 
 
+class SemanticAnalyzer:
+    """Analyze semantic aspects of IR including tag usage and dependencies."""
+    
+    def __init__(self):
+        # Known control flow patterns for annotations
+        self.control_patterns = {
+            "shutdown_trigger": [
+                "HMI_PLANT.STOP", "HMI_PLANT.SHUTDOWN", "EMERGENCY_STOP"
+            ],
+            "start_trigger": [
+                "HMI_PLANT.START", "HMI_PLANT.RUN", "AUTO_START"
+            ],
+            "alarm_condition": [
+                "HMI_ALARM", "FAULT", "TRIP", "HIGH_LEVEL", "LOW_LEVEL"
+            ],
+            "permissive_check": [
+                "PERMISSIVE", "SAFE", "READY", "ENABLED"
+            ]
+        }
+    
+    def analyze_tag_usage(self, ir_project: IRProject) -> Dict[str, Any]:
+        """Analyze tag usage patterns across routines."""
+        tag_summary = {}
+        
+        for program in ir_project.programs:
+            for routine in program.routines:
+                routine_name = routine.name
+                inputs = set()
+                outputs = set()
+                internal = set()
+                
+                # Analyze ST content for tag usage
+                if routine.content:
+                    usage = self._analyze_st_tag_usage(routine.content)
+                    inputs.update(usage['inputs'])
+                    outputs.update(usage['outputs'])
+                    internal.update(usage['internal'])
+                
+                # Analyze control flow for additional tag usage
+                if hasattr(routine, 'control_flow') and routine.control_flow:
+                    cf_usage = self._analyze_control_flow_tag_usage(routine.control_flow)
+                    inputs.update(cf_usage['inputs'])
+                    outputs.update(cf_usage['outputs'])
+                
+                tag_summary[routine_name] = {
+                    "inputs": list(inputs),
+                    "outputs": list(outputs),
+                    "internal": list(internal)
+                }
+        
+        return tag_summary
+    
+    def _analyze_st_tag_usage(self, content: str) -> Dict[str, Set[str]]:
+        """Analyze ST content for tag usage patterns."""
+        inputs = set()
+        outputs = set()
+        internal = set()
+        
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('//'):
+                continue
+            
+            # Look for assignments (LHS = RHS)
+            if ':=' in line:
+                parts = line.split(':=')
+                if len(parts) == 2:
+                    lhs = parts[0].strip()
+                    rhs = parts[1].strip().rstrip(';')
+                    
+                    # LHS is output
+                    tag = self._extract_tag_from_expression(lhs)
+                    if tag:
+                        outputs.add(tag)
+                    
+                    # RHS is input
+                    rhs_tags = self._extract_tags_from_expression(rhs)
+                    inputs.update(rhs_tags)
+            
+            # Look for conditions in IF statements
+            elif line.upper().startswith('IF '):
+                condition = line[3:].strip()
+                if condition.endswith('THEN'):
+                    condition = condition[:-4].strip()
+                
+                condition_tags = self._extract_tags_from_expression(condition)
+                inputs.update(condition_tags)
+        
+        # Find internal tags (used as both input and output)
+        internal = inputs.intersection(outputs)
+        inputs = inputs - internal
+        outputs = outputs - internal
+        
+        return {
+            "inputs": inputs,
+            "outputs": outputs,
+            "internal": internal
+        }
+    
+    def _analyze_control_flow_tag_usage(self, control_flow: Dict[str, Any]) -> Dict[str, Set[str]]:
+        """Analyze control flow structure for tag usage."""
+        inputs = set()
+        outputs = set()
+        
+        if control_flow.get('type') == 'structured_text':
+            for flow_item in control_flow.get('control_flow', []):
+                if flow_item.get('type') == 'branch':
+                    # Condition tags are inputs
+                    condition = flow_item.get('condition', '')
+                    if condition and condition != 'else':
+                        condition_tags = self._extract_tags_from_expression(condition)
+                        inputs.update(condition_tags)
+                    
+                    # Action tags are outputs
+                    for action in flow_item.get('actions', []):
+                        action_tags = self._extract_tags_from_expression(action)
+                        outputs.update(action_tags)
+        
+        return {
+            "inputs": inputs,
+            "outputs": outputs,
+            "internal": set()
+        }
+    
+    def _extract_tag_from_expression(self, expr: str) -> Optional[str]:
+        """Extract a single tag from an expression."""
+        # Simple tag extraction - look for word patterns
+        import re
+        # Match patterns like: TagName, TagName.Field, TagName[Index], DI_TAG, AI_TAG, etc.
+        tag_pattern = r'\b[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*(\[[^\]]*\])?\b'
+        matches = re.findall(tag_pattern, expr)
+        if matches:
+            return matches[0][0]  # Return first match
+        return None
+    
+    def _extract_tags_from_expression(self, expr: str) -> Set[str]:
+        """Extract all tags from an expression."""
+        import re
+        tags = set()
+        
+        # Match patterns like: TagName, TagName.Field, TagName[Index], DI_TAG, AI_TAG, etc.
+        tag_pattern = r'\b[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*(\[[^\]]*\])?\b'
+        matches = re.findall(tag_pattern, expr)
+        
+        for match in matches:
+            if match[0]:  # First group contains the tag name
+                # Clean up the tag name (remove array indices, etc.)
+                tag_name = match[0]
+                # Remove array indices if present
+                if '[' in tag_name:
+                    tag_name = tag_name.split('[')[0]
+                tags.add(tag_name)
+        
+        return tags
+    
+    def analyze_interdependencies(self, ir_project: IRProject) -> List[Dict[str, str]]:
+        """Analyze inter-routine data dependencies."""
+        dependencies = []
+        
+        # Build tag usage map
+        tag_writers = {}  # tag -> list of routines that write to it
+        tag_readers = {}  # tag -> list of routines that read from it
+        
+        for program in ir_project.programs:
+            for routine in program.routines:
+                routine_name = routine.name
+                
+                # Get tag usage for this routine
+                usage = self._analyze_st_tag_usage(routine.content) if routine.content else {"inputs": set(), "outputs": set(), "internal": set()}
+                
+                # Track writers
+                for tag in usage['outputs']:
+                    if tag not in tag_writers:
+                        tag_writers[tag] = []
+                    tag_writers[tag].append(routine_name)
+                
+                # Track readers
+                for tag in usage['inputs']:
+                    if tag not in tag_readers:
+                        tag_readers[tag] = []
+                    tag_readers[tag].append(routine_name)
+        
+        # Find dependencies
+        for tag in set(tag_writers.keys()) & set(tag_readers.keys()):
+            writers = tag_writers[tag]
+            readers = tag_readers[tag]
+            
+            for writer in writers:
+                for reader in readers:
+                    if writer != reader:  # Don't include self-dependencies
+                        dependencies.append({
+                            "writer": writer,
+                            "reader": reader,
+                            "tag": tag
+                        })
+        
+        return dependencies
+    
+    def analyze_control_flow_annotations(self, ir_project: IRProject) -> Dict[str, List[Dict[str, str]]]:
+        """Analyze control flow for semantic annotations."""
+        annotations = {}
+        
+        for program in ir_project.programs:
+            for routine in program.routines:
+                routine_name = routine.name
+                routine_annotations = []
+                
+                if routine.content:
+                    # Analyze ST content for patterns
+                    st_annotations = self._analyze_st_annotations(routine.content)
+                    routine_annotations.extend(st_annotations)
+                
+                if routine_annotations:
+                    annotations[routine_name] = routine_annotations
+        
+        return annotations
+    
+    def _analyze_st_annotations(self, content: str) -> List[Dict[str, str]]:
+        """Analyze ST content for control flow annotations."""
+        annotations = []
+        
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('//'):
+                continue
+            
+            # Check for control patterns
+            for event_type, patterns in self.control_patterns.items():
+                for pattern in patterns:
+                    if pattern.lower() in line.lower():
+                        annotations.append({
+                            "condition": line,
+                            "event": event_type
+                        })
+                        break
+        
+        return annotations
+
+
 def export_ir_to_json(
     ir_project: IRProject,
     output_path: str,
@@ -415,6 +657,10 @@ def export_ir_to_json(
     if ExportComponent.INTERACTIONS in export_components:
         analyzer = InteractionAnalyzer()
         export_data["interactions"] = analyzer.analyze_interactions(ir_project)
+    
+    # Export semantic analysis
+    if ExportComponent.SEMANTIC in export_components:
+        export_data["semantic"] = _export_semantic(ir_project)
     
     # Write to file
     output_path = Path(output_path)
@@ -642,5 +888,35 @@ def _export_programs(ir_project: IRProject) -> Dict[str, Any]:
         "programs": programs,
         "summary": {
             "total_programs": len(programs)
+        }
+    } 
+
+
+def _export_semantic(ir_project: IRProject) -> Dict[str, Any]:
+    """Export semantic analysis including tag usage, dependencies, and annotations."""
+    analyzer = SemanticAnalyzer()
+    
+    # Analyze tag usage
+    tag_summary = analyzer.analyze_tag_usage(ir_project)
+    
+    # Analyze inter-routine dependencies
+    interdependencies = analyzer.analyze_interdependencies(ir_project)
+    
+    # Analyze control flow annotations
+    control_flow_annotations = analyzer.analyze_control_flow_annotations(ir_project)
+    
+    # Calculate summary statistics
+    total_routines = sum(len(program.routines) for program in ir_project.programs)
+    total_dependencies = len(interdependencies)
+    total_annotations = sum(len(annotations) for annotations in control_flow_annotations.values())
+    
+    return {
+        "tag_summary": tag_summary,
+        "interdependencies": interdependencies,
+        "control_flow_annotations": control_flow_annotations,
+        "summary": {
+            "total_routines": total_routines,
+            "total_dependencies": total_dependencies,
+            "total_annotations": total_annotations
         }
     } 

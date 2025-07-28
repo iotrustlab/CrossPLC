@@ -434,3 +434,39 @@ class InteractiveIRQuery:
             include=components,
             pretty_print=True
         ) 
+
+    def get_tag_usage(self, tag_name: str) -> Dict[str, Any]:
+        """Get detailed usage information for a specific tag."""
+        usage_info = {
+            "tag_name": tag_name,
+            "readers": [],
+            "writers": [],
+            "routines": [],
+            "programs": []
+        }
+        
+        for program in self.ir_project.programs:
+            for routine in program.routines:
+                routine_name = routine.name
+                program_name = program.name
+                
+                # Check if tag is used in this routine
+                if routine.content:
+                    # Simple check for tag usage in content
+                    if tag_name in routine.content:
+                        usage_info["routines"].append(routine_name)
+                        usage_info["programs"].append(program_name)
+                        
+                        # Determine if it's a reader or writer
+                        if f"{tag_name} :=" in routine.content:
+                            usage_info["writers"].append(routine_name)
+                        elif tag_name in routine.content:
+                            usage_info["readers"].append(routine_name)
+        
+        # Remove duplicates
+        usage_info["readers"] = list(set(usage_info["readers"]))
+        usage_info["writers"] = list(set(usage_info["writers"]))
+        usage_info["routines"] = list(set(usage_info["routines"]))
+        usage_info["programs"] = list(set(usage_info["programs"]))
+        
+        return usage_info 

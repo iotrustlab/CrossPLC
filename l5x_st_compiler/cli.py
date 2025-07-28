@@ -532,7 +532,7 @@ Examples:
         export_ir_parser.add_argument('--input', '-i', required=True, help='Input L5X file')
         export_ir_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
         export_ir_parser.add_argument('--include', type=str, default='tags,control_flow', 
-                                     help='Components to include (comma-separated: tags,control_flow,data_types,function_blocks,interactions,routines,programs)')
+                                     help='Components to include (comma-separated: tags,control_flow,data_types,function_blocks,interactions,routines,programs,semantic)')
         export_ir_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
         
         try:
