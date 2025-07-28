@@ -364,12 +364,23 @@ class IRConverter:
             
             if routine_data.type.upper() in ['RLL', 'LADDER']:
                 # Extract ladder logic
-                for rung_elem in routine_element.findall('.//Rung'):
-                    rung_text = rung_elem.get('Text', '')
-                    if rung_text:
-                        # Translate ladder to ST
-                        st_content = translate_ladder_to_st(rung_text)
-                        content_lines.append(st_content)
+                # First try RLLContent format (newer L5X files)
+                rll_content = routine_element.find('.//RLLContent')
+                if rll_content is not None:
+                    for rung_elem in rll_content.findall('.//Rung'):
+                        rung_text = rung_elem.get('Text', '')
+                        if rung_text:
+                            # Translate ladder to ST
+                            st_content = translate_ladder_to_st(rung_text)
+                            content_lines.append(st_content)
+                else:
+                    # Fallback to direct Rung elements
+                    for rung_elem in routine_element.findall('.//Rung'):
+                        rung_text = rung_elem.get('Text', '')
+                        if rung_text:
+                            # Translate ladder to ST
+                            st_content = translate_ladder_to_st(rung_text)
+                            content_lines.append(st_content)
             
             elif routine_data.type.upper() == 'FBD':
                 # Extract FBD content
@@ -378,11 +389,19 @@ class IRConverter:
                     content_lines.append(fbd_content)
             
             else:
-                # Extract ST content
-                for text_elem in routine_element.findall('.//Text'):
-                    cdata = text_elem.find('.//CDATAContent')
-                    if cdata is not None and cdata.text:
-                        content_lines.append(cdata.text.strip())
+                # Extract ST content - try multiple formats
+                # First try STContent format (newer L5X files)
+                st_content = routine_element.find('.//STContent')
+                if st_content is not None:
+                    for line_elem in st_content.findall('.//Line'):
+                        if line_elem.text:
+                            content_lines.append(line_elem.text.strip())
+                else:
+                    # Fallback to Text format (older L5X files)
+                    for text_elem in routine_element.findall('.//Text'):
+                        cdata = text_elem.find('.//CDATAContent')
+                        if cdata is not None and cdata.text:
+                            content_lines.append(cdata.text.strip())
             
             return '\n'.join(content_lines)
             
@@ -444,12 +463,23 @@ class IRConverter:
             
             if routine_type.upper() in ['RLL', 'LADDER']:
                 # Extract ladder logic
-                for rung_elem in routine_elem.findall('.//Rung'):
-                    rung_text = rung_elem.get('Text', '')
-                    if rung_text:
-                        # Translate ladder to ST
-                        st_content = translate_ladder_to_st(rung_text)
-                        content_lines.append(st_content)
+                # First try RLLContent format (newer L5X files)
+                rll_content = routine_elem.find('.//RLLContent')
+                if rll_content is not None:
+                    for rung_elem in rll_content.findall('.//Rung'):
+                        rung_text = rung_elem.get('Text', '')
+                        if rung_text:
+                            # Translate ladder to ST
+                            st_content = translate_ladder_to_st(rung_text)
+                            content_lines.append(st_content)
+                else:
+                    # Fallback to direct Rung elements
+                    for rung_elem in routine_elem.findall('.//Rung'):
+                        rung_text = rung_elem.get('Text', '')
+                        if rung_text:
+                            # Translate ladder to ST
+                            st_content = translate_ladder_to_st(rung_text)
+                            content_lines.append(st_content)
             
             elif routine_type.upper() == 'FBD':
                 # Extract FBD content
@@ -458,13 +488,21 @@ class IRConverter:
                     content_lines.append(fbd_content)
             
             else:
-                # Extract ST content
-                for text_elem in routine_elem.findall('.//Text'):
-                    cdata = text_elem.find('.//CDATAContent')
-                    if cdata is not None and cdata.text:
-                        content_lines.append(cdata.text.strip())
-                    elif text_elem.text:
-                        content_lines.append(text_elem.text.strip())
+                # Extract ST content - try multiple formats
+                # First try STContent format (newer L5X files)
+                st_content = routine_elem.find('.//STContent')
+                if st_content is not None:
+                    for line_elem in st_content.findall('.//Line'):
+                        if line_elem.text:
+                            content_lines.append(line_elem.text.strip())
+                else:
+                    # Fallback to Text format (older L5X files)
+                    for text_elem in routine_elem.findall('.//Text'):
+                        cdata = text_elem.find('.//CDATAContent')
+                        if cdata is not None and cdata.text:
+                            content_lines.append(cdata.text.strip())
+                        elif text_elem.text:
+                            content_lines.append(text_elem.text.strip())
             
             return '\n'.join(content_lines)
             
