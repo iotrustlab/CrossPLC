@@ -876,6 +876,275 @@ class CFGAnalyzer:
         return dataflow 
 
 
+class GraphExporter:
+    """Export CFG and data flow graphs to DOT and GraphML formats."""
+    
+    def __init__(self):
+        self.node_counter = 0
+    
+    def export_cfg_to_dot(self, cfg_data: Dict[str, Any], output_path: str) -> str:
+        """Export control flow graph to DOT format."""
+        dot_content = []
+        dot_content.append("digraph CFG {")
+        dot_content.append("  rankdir=TB;")
+        dot_content.append("  node [shape=box, style=filled, fillcolor=lightblue];")
+        dot_content.append("  edge [color=black];")
+        dot_content.append("")
+        
+        for routine_name, routine_cfg in cfg_data.get("cfg", {}).items():
+            # Add subgraph for each routine
+            dot_content.append(f"  subgraph cluster_{routine_name.replace(' ', '_')} {{")
+            dot_content.append(f"    label=\"{routine_name}\";")
+            dot_content.append("    style=filled;")
+            dot_content.append("    color=lightgrey;")
+            dot_content.append("")
+            
+            blocks = routine_cfg.get("blocks", [])
+            for block in blocks:
+                block_id = block.get("block_id", "")
+                block_type = block.get("type", "instruction")
+                
+                # Create node label
+                if block_type == "branch":
+                    condition = block.get("condition", "")
+                    label = f"{block_id}\\nIF: {condition}"
+                    color = "lightgreen"
+                elif block_type == "control":
+                    condition = block.get("condition", "")
+                    label = f"{block_id}\\n{condition}"
+                    color = "lightyellow"
+                else:
+                    instructions = block.get("instructions", [])
+                    # Truncate instructions for display
+                    if len(instructions) > 3:
+                        display_instructions = instructions[:3] + ["..."]
+                    else:
+                        display_instructions = instructions
+                    label = f"{block_id}\\n" + "\\n".join(display_instructions)
+                    color = "lightblue"
+                
+                # Add data flow info
+                defs = block.get("defs", [])
+                uses = block.get("uses", [])
+                if defs or uses:
+                    label += f"\\nDefs: {', '.join(defs[:3])}"
+                    if len(defs) > 3:
+                        label += "..."
+                    label += f"\\nUses: {', '.join(uses[:3])}"
+                    if len(uses) > 3:
+                        label += "..."
+                
+                dot_content.append(f"    \"{routine_name}_{block_id}\" [label=\"{label}\", fillcolor=\"{color}\"];")
+            
+            # Add edges
+            for block in blocks:
+                block_id = block.get("block_id", "")
+                successors = block.get("successors", [])
+                
+                for successor in successors:
+                    dot_content.append(f"    \"{routine_name}_{block_id}\" -> \"{routine_name}_{successor}\";")
+                
+                # Add conditional edges
+                if block.get("type") == "branch":
+                    true_succ = block.get("true_successor")
+                    false_succ = block.get("false_successor")
+                    if true_succ:
+                        dot_content.append(f"    \"{routine_name}_{block_id}\" -> \"{routine_name}_{true_succ}\" [label=\"true\"];")
+                    if false_succ:
+                        dot_content.append(f"    \"{routine_name}_{block_id}\" -> \"{routine_name}_{false_succ}\" [label=\"false\"];")
+            
+            dot_content.append("  }")
+            dot_content.append("")
+        
+        dot_content.append("}")
+        
+        # Write to file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(dot_content))
+        
+        return '\n'.join(dot_content)
+    
+    def export_dataflow_to_dot(self, cfg_data: Dict[str, Any], output_path: str) -> str:
+        """Export inter-routine data flow to DOT format."""
+        dot_content = []
+        dot_content.append("digraph DataFlow {")
+        dot_content.append("  rankdir=LR;")
+        dot_content.append("  node [shape=box, style=filled, fillcolor=lightcoral];")
+        dot_content.append("  edge [color=red];")
+        dot_content.append("")
+        
+        # Add routine nodes
+        routines = set()
+        for routine_name in cfg_data.get("cfg", {}).keys():
+            routines.add(routine_name)
+        
+        for routine in routines:
+            dot_content.append(f"  \"{routine}\" [label=\"{routine}\"];")
+        
+        dot_content.append("")
+        
+        # Add data flow edges
+        dataflow = cfg_data.get("inter_routine_dataflow", [])
+        for flow in dataflow:
+            source = flow.get("source", "")
+            target = flow.get("target", "")
+            tag = flow.get("tag", "")
+            flow_type = flow.get("type", "write_to_read")
+            
+            edge_label = f"{tag}\\n({flow_type})"
+            dot_content.append(f"  \"{source}\" -> \"{target}\" [label=\"{edge_label}\"];")
+        
+        dot_content.append("}")
+        
+        # Write to file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(dot_content))
+        
+        return '\n'.join(dot_content)
+    
+    def export_cfg_to_graphml(self, cfg_data: Dict[str, Any], output_path: str) -> str:
+        """Export control flow graph to GraphML format."""
+        graphml_content = []
+        graphml_content.append('<?xml version="1.0" encoding="UTF-8"?>')
+        graphml_content.append('<graphml xmlns="http://graphml.graphdrawing.org/xmlns"')
+        graphml_content.append('         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"')
+        graphml_content.append('         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns')
+        graphml_content.append('         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">')
+        graphml_content.append('')
+        
+        # Define attributes
+        graphml_content.append('  <key id="label" for="node" attr.name="label" attr.type="string"/>')
+        graphml_content.append('  <key id="type" for="node" attr.name="type" attr.type="string"/>')
+        graphml_content.append('  <key id="routine" for="node" attr.name="routine" attr.type="string"/>')
+        graphml_content.append('  <key id="defs" for="node" attr.name="defs" attr.type="string"/>')
+        graphml_content.append('  <key id="uses" for="node" attr.name="uses" attr.type="string"/>')
+        graphml_content.append('  <key id="tag" for="edge" attr.name="tag" attr.type="string"/>')
+        graphml_content.append('  <key id="flow_type" for="edge" attr.name="flow_type" attr.type="string"/>')
+        graphml_content.append('')
+        
+        # Start graph
+        graphml_content.append('  <graph id="cfg" edgedefault="directed">')
+        graphml_content.append('')
+        
+        # Add nodes
+        node_id = 0
+        for routine_name, routine_cfg in cfg_data.get("cfg", {}).items():
+            blocks = routine_cfg.get("blocks", [])
+            for block in blocks:
+                block_id = block.get("block_id", "")
+                block_type = block.get("type", "instruction")
+                
+                # Create node label
+                if block_type == "branch":
+                    condition = block.get("condition", "")
+                    label = f"{block_id} - IF: {condition}"
+                elif block_type == "control":
+                    condition = block.get("condition", "")
+                    label = f"{block_id} - {condition}"
+                else:
+                    instructions = block.get("instructions", [])
+                    label = f"{block_id} - {len(instructions)} instructions"
+                
+                defs = block.get("defs", [])
+                uses = block.get("uses", [])
+                
+                graphml_content.append(f'    <node id="n{node_id}">')
+                graphml_content.append(f'      <data key="label">{label}</data>')
+                graphml_content.append(f'      <data key="type">{block_type}</data>')
+                graphml_content.append(f'      <data key="routine">{routine_name}</data>')
+                graphml_content.append(f'      <data key="defs">{",".join(defs)}</data>')
+                graphml_content.append(f'      <data key="uses">{",".join(uses)}</data>')
+                graphml_content.append(f'    </node>')
+                node_id += 1
+        
+        graphml_content.append('')
+        
+        # Add edges (simplified - just show connections between blocks)
+        edge_id = 0
+        for routine_name, routine_cfg in cfg_data.get("cfg", {}).items():
+            blocks = routine_cfg.get("blocks", [])
+            for block in blocks:
+                block_id = block.get("block_id", "")
+                successors = block.get("successors", [])
+                
+                for successor in successors:
+                    graphml_content.append(f'    <edge id="e{edge_id}" source="n{edge_id}" target="n{edge_id + 1}">')
+                    graphml_content.append(f'      <data key="tag">control_flow</data>')
+                    graphml_content.append(f'      <data key="flow_type">successor</data>')
+                    graphml_content.append(f'    </edge>')
+                    edge_id += 1
+        
+        graphml_content.append('  </graph>')
+        graphml_content.append('</graphml>')
+        
+        # Write to file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(graphml_content))
+        
+        return '\n'.join(graphml_content)
+    
+    def export_dataflow_to_graphml(self, cfg_data: Dict[str, Any], output_path: str) -> str:
+        """Export inter-routine data flow to GraphML format."""
+        graphml_content = []
+        graphml_content.append('<?xml version="1.0" encoding="UTF-8"?>')
+        graphml_content.append('<graphml xmlns="http://graphml.graphdrawing.org/xmlns"')
+        graphml_content.append('         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"')
+        graphml_content.append('         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns')
+        graphml_content.append('         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">')
+        graphml_content.append('')
+        
+        # Define attributes
+        graphml_content.append('  <key id="label" for="node" attr.name="label" attr.type="string"/>')
+        graphml_content.append('  <key id="tag" for="edge" attr.name="tag" attr.type="string"/>')
+        graphml_content.append('  <key id="flow_type" for="edge" attr.name="flow_type" attr.type="string"/>')
+        graphml_content.append('')
+        
+        # Start graph
+        graphml_content.append('  <graph id="dataflow" edgedefault="directed">')
+        graphml_content.append('')
+        
+        # Add routine nodes
+        routines = set()
+        for routine_name in cfg_data.get("cfg", {}).keys():
+            routines.add(routine_name)
+        
+        node_id = 0
+        routine_nodes = {}
+        for routine in routines:
+            graphml_content.append(f'    <node id="n{node_id}">')
+            graphml_content.append(f'      <data key="label">{routine}</data>')
+            graphml_content.append(f'    </node>')
+            routine_nodes[routine] = f"n{node_id}"
+            node_id += 1
+        
+        graphml_content.append('')
+        
+        # Add data flow edges
+        dataflow = cfg_data.get("inter_routine_dataflow", [])
+        edge_id = 0
+        for flow in dataflow:
+            source = flow.get("source", "")
+            target = flow.get("target", "")
+            tag = flow.get("tag", "")
+            flow_type = flow.get("type", "write_to_read")
+            
+            if source in routine_nodes and target in routine_nodes:
+                graphml_content.append(f'    <edge id="e{edge_id}" source="{routine_nodes[source]}" target="{routine_nodes[target]}">')
+                graphml_content.append(f'      <data key="tag">{tag}</data>')
+                graphml_content.append(f'      <data key="flow_type">{flow_type}</data>')
+                graphml_content.append(f'    </edge>')
+                edge_id += 1
+        
+        graphml_content.append('  </graph>')
+        graphml_content.append('</graphml>')
+        
+        # Write to file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(graphml_content))
+        
+        return '\n'.join(graphml_content)
+
+
 def export_ir_to_json(
     ir_project: IRProject,
     output_path: str,
@@ -1236,3 +1505,34 @@ def _export_cfg(ir_project: IRProject) -> Dict[str, Any]:
             "total_dataflow_edges": total_dataflow_edges
         }
     } 
+
+
+def export_cfg_to_graphs(cfg_data: Dict[str, Any], output_dir: str = "out") -> Dict[str, str]:
+    """Export CFG data to DOT and GraphML formats."""
+    exporter = GraphExporter()
+    output_files = {}
+    
+    # Create output directory
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    
+    # Export CFG to DOT
+    cfg_dot_path = f"{output_dir}/cfg.dot"
+    exporter.export_cfg_to_dot(cfg_data, cfg_dot_path)
+    output_files["cfg_dot"] = cfg_dot_path
+    
+    # Export data flow to DOT
+    dataflow_dot_path = f"{output_dir}/dataflow.dot"
+    exporter.export_dataflow_to_dot(cfg_data, dataflow_dot_path)
+    output_files["dataflow_dot"] = dataflow_dot_path
+    
+    # Export CFG to GraphML
+    cfg_graphml_path = f"{output_dir}/cfg.graphml"
+    exporter.export_cfg_to_graphml(cfg_data, cfg_graphml_path)
+    output_files["cfg_graphml"] = cfg_graphml_path
+    
+    # Export data flow to GraphML
+    dataflow_graphml_path = f"{output_dir}/dataflow.graphml"
+    exporter.export_dataflow_to_graphml(cfg_data, dataflow_graphml_path)
+    output_files["dataflow_graphml"] = dataflow_graphml_path
+    
+    return output_files 

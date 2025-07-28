@@ -535,6 +535,8 @@ Examples:
                                      help='Components to include (comma-separated: tags,control_flow,data_types,function_blocks,interactions,routines,programs,semantic,cfg)')
         export_ir_parser.add_argument('--mode', type=str, choices=['default', 'cfg'], default='default',
                                      help='Export mode: default or cfg (control flow graph)')
+        export_ir_parser.add_argument('--export-graphs', action='store_true',
+                                     help='Export CFG to DOT and GraphML formats')
         export_ir_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
         
         try:
@@ -581,6 +583,14 @@ Examples:
                 )
                 
                 print(f"✅ Successfully exported IR to {export_ir_args.output}")
+                
+                # Export graphs if requested
+                if export_ir_args.export_graphs and 'cfg' in export_data:
+                    print(f"📊 Exporting graphs...")
+                    from .export_ir import export_cfg_to_graphs
+                    graph_files = export_cfg_to_graphs(export_data['cfg'])
+                    for graph_type, file_path in graph_files.items():
+                        print(f"  - {graph_type}: {file_path}")
                 
                 # Print summary
                 metadata = export_data.get('metadata', {})
