@@ -531,8 +531,8 @@ Examples:
         export_ir_parser = argparse.ArgumentParser()
         export_ir_parser.add_argument('--input', '-i', required=True, help='Input L5X file')
         export_ir_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
-        export_ir_parser.add_argument('--include', nargs='+', default=['tags', 'control_flow'], 
-                                     help='Components to include (tags, control_flow, data_types, function_blocks, interactions, routines, programs)')
+        export_ir_parser.add_argument('--include', type=str, default='tags,control_flow', 
+                                     help='Components to include (comma-separated: tags,control_flow,data_types,function_blocks,interactions,routines,programs)')
         export_ir_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
         
         try:
@@ -560,12 +560,15 @@ Examples:
                 print(f"  - Programs: {len(ir_project.programs)}")
                 print(f"  - Controller tags: {len(ir_project.controller.tags)}")
                 
+                # Parse include components
+                include_components = [comp.strip() for comp in export_ir_args.include.split(',')]
+                
                 # Export IR to JSON
-                print(f"📤 Exporting IR components: {', '.join(export_ir_args.include)}")
+                print(f"📤 Exporting IR components: {', '.join(include_components)}")
                 export_data = export_ir_to_json(
                     ir_project=ir_project,
                     output_path=export_ir_args.output,
-                    include=export_ir_args.include,
+                    include=include_components,
                     pretty_print=True
                 )
                 
@@ -581,7 +584,7 @@ Examples:
                 
                 if export_ir_args.verbose:
                     print(f"\n📋 Detailed Summary:")
-                    for component in export_ir_args.include:
+                    for component in include_components:
                         if component in export_data:
                             summary = export_data[component].get('summary', {})
                             for key, value in summary.items():
