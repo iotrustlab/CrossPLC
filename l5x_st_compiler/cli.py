@@ -347,7 +347,7 @@ Examples:
     
     parser.add_argument(
         'command',
-        choices=['l5x2st', 'st2l5x', 'extract-io', 'export-ir'],
+        choices=['l5x2st', 'st2l5x', 'extract-io', 'export-ir', 'analyze-multi'],
         help='Command to execute'
     )
     
@@ -618,6 +618,134 @@ Examples:
         except SystemExit:
             # If argparse fails, show help
             export_ir_parser.print_help()
+            sys.exit(1)
+    elif args.command == 'analyze-multi':
+        # Parse the remaining arguments for analyze-multi
+        analyze_multi_parser = argparse.ArgumentParser()
+        analyze_multi_parser.add_argument('--directory', '-d', help='Directory containing L5X and L5K files')
+        analyze_multi_parser.add_argument('--l5x', action='append', help='L5X file path (can be specified multiple times)')
+        analyze_multi_parser.add_argument('--l5k', action='append', help='L5K file path (can be specified multiple times)')
+        analyze_multi_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
+        analyze_multi_parser.add_argument('--require-overlay', action='store_true', help='Require L5K overlay for all PLCs')
+        analyze_multi_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+        
+        try:
+            analyze_multi_args = analyze_multi_parser.parse_args(remaining)
+            
+            # Call the analyze_multi function directly
+            if analyze_multi_args.verbose:
+                logging.basicConfig(level=logging.DEBUG)
+            
+            try:
+                from pathlib import Path
+                from .project_ir import ProjectIR
+                
+                l5x_files = []
+                l5k_overlays = {}
+                
+                if analyze_multi_args.directory:
+                    # Load from directory
+                    dir_path = Path(analyze_multi_args.directory)
+                    if not dir_path.exists():
+                        print(f"❌ Error: Directory '{analyze_multi_args.directory}' not found.")
+                        sys.exit(1)
+                    
+                    # Find all L5X and L5K files
+                    l5x_files = list(dir_path.glob("*.L5X"))
+                    l5k_files = list(dir_path.glob("*.L5K"))
+                    
+                    # Match L5X and L5K files by name
+                    for l5x_file in l5x_files:
+                        plc_name = ProjectIR._extract_plc_name(l5x_file)
+                        matching_l5k = None
+                        for l5k_file in l5k_files:
+                            if l5k_file.stem == l5x_file.stem:
+                                matching_l5k = l5k_file
+                                break
+                        if matching_l5k:
+                            l5k_overlays[plc_name] = matching_l5k
+                    
+                    print(f"📁 Found {len(l5x_files)} L5X files and {len(l5k_files)} L5K files in directory")
+                    
+                elif analyze_multi_args.l5x:
+                    # Load from explicit file lists
+                    l5x_files = [Path(f) for f in analyze_multi_args.l5x]
+                    l5k_files = [Path(f) for f in analyze_multi_args.l5k] if analyze_multi_args.l5k else []
+                    
+                    # Match L5X and L5K files by position (assuming they're paired)
+                    for i, l5x_file in enumerate(l5x_files):
+                        plc_name = ProjectIR._extract_plc_name(l5x_file)
+                        if i < len(l5k_files):
+                            l5k_overlays[plc_name] = l5k_files[i]
+                    
+                    print(f"📁 Processing {len(l5x_files)} L5X files with {len(l5k_overlays)} L5K overlays")
+                
+                else:
+                    print("❌ Error: Must specify either --directory or --l5x files")
+                    sys.exit(1)
+                
+                # Validate files exist
+                for l5x_file in l5x_files:
+                    if not l5x_file.exists():
+                        print(f"❌ Error: L5X file '{l5x_file}' not found.")
+                        sys.exit(1)
+                
+                for l5k_file in l5k_overlays.values():
+                    if not l5k_file.exists():
+                        print(f"❌ Error: L5K file '{l5k_file}' not found.")
+                        sys.exit(1)
+                
+                # Create ProjectIR
+                print(f"🔧 Creating multi-PLC analysis...")
+                project_ir, missing_overlays = ProjectIR.from_files(l5x_files, l5k_overlays)
+                
+                # Check for missing overlays
+                if missing_overlays and analyze_multi_args.require_overlay:
+                    print(f"❌ Error: L5K overlays required but missing for: {', '.join(missing_overlays)}")
+                    sys.exit(1)
+                elif missing_overlays:
+                    print(f"⚠️ Warning: L5K overlays missing for: {', '.join(missing_overlays)}")
+                
+                # Export analysis
+                output_path = Path(analyze_multi_args.output)
+                print(f"📊 Exporting multi-PLC analysis to {output_path}")
+                summary = project_ir.export_summary(output_path)
+                
+                print(f"✅ Successfully exported multi-PLC analysis to {output_path}")
+                
+                # Print summary
+                metadata = summary.get('metadata', {})
+                print(f"📊 Analysis Summary:")
+                print(f"  - Total PLCs: {metadata.get('total_plcs', 0)}")
+                print(f"  - PLC Names: {', '.join(metadata.get('plc_names', []))}")
+                print(f"  - Shared Tags: {metadata.get('total_shared_tags', 0)}")
+                print(f"  - Conflicts: {metadata.get('total_conflicts', 0)}")
+                
+                if analyze_multi_args.verbose:
+                    print(f"\n📋 Detailed Summary:")
+                    for plc_name, plc_summary in summary.get('plc_summary', {}).items():
+                        print(f"  - {plc_name}: {plc_summary['controller_tags']} tags, {plc_summary['programs']} programs, {plc_summary['routines']} routines")
+                    
+                    if summary.get('shared_tags'):
+                        print(f"\n🔗 Shared Tags:")
+                        for shared_tag in summary['shared_tags'][:5]:  # Show first 5
+                            print(f"  - {shared_tag['tag']}: {shared_tag['writer']} → {', '.join(shared_tag['readers'])}")
+                    
+                    if summary.get('conflicting_tags'):
+                        print(f"\n⚠️ Conflicts:")
+                        for conflict in summary['conflicting_tags'][:5]:  # Show first 5
+                            print(f"  - {conflict['tag']}: {conflict['conflict']} in {', '.join(conflict['plcs'])}")
+                
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                if analyze_multi_args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                sys.exit(1)
+            
+        except SystemExit:
+            # If argparse fails, show help
+            analyze_multi_parser.print_help()
             sys.exit(1)
 
 
