@@ -1,6 +1,6 @@
 # L5X-ST Compiler
 
-A modern Python 3 implementation for converting between L5X files (Allen Bradley/Rockwell Automation) and Structured Text (ST) format. This project builds upon the original L5X parser and provides a clean, modular, and testable codebase with **complete round-trip conversion**, **IR validation**, and **L5K overlay support**.
+A modern Python 3 implementation for converting between L5X files (Allen Bradley/Rockwell Automation) and Structured Text (ST) format. This project builds upon the original L5X parser and provides a clean, modular, and testable codebase with **complete round-trip conversion**, **IR validation**, **L5K overlay support**, **semantic analysis**, **control flow graph analysis**, and **multi-PLC analysis**.
 
 ## Features
 
@@ -32,6 +32,28 @@ A modern Python 3 implementation for converting between L5X files (Allen Bradley
 - **User-Defined Data Types**: Complete UDT definitions with nested structures
 - **Initial Tag Values**: Default values for all tags in the project
 
+### IR Export and Analysis
+- **Component Export**: Export tags, control flow, data types, function blocks, interactions, routines, programs
+- **Semantic Analysis**: Tag usage summary, inter-routine dependencies, control flow annotations
+- **Interactive Querying API**: Programmatic access to IR components with search and analysis
+- **Control Flow Analysis**: Extract and analyze control flow structures from routines
+- **Cross-Program Interaction Detection**: Identify dependencies between programs and controllers
+
+### Control Flow Graph (CFG) Analysis
+- **Static Analysis**: Similar to Angr, IDA Pro, or Ghidra for PLC code
+- **Basic Block Analysis**: Parse ST routines into basic blocks with instructions
+- **Data Flow Analysis**: Track defs (writes) and uses (reads) per block
+- **Cross-Routine Data Flow**: Detect shared tag dependencies between routines
+- **Industry Terminology**: Treat routines as functions, tags as symbols
+- **Graph Export**: DOT and GraphML formats for visualization
+
+### Multi-PLC Analysis
+- **Cross-PLC Dependencies**: Detect tags written by one PLC and read by others
+- **Shared Tag Analysis**: Identify communication patterns between multiple PLCs
+- **Conflict Detection**: Find naming conflicts and data type mismatches across PLCs
+- **L5K Overlay Integration**: Enhanced context with task and program mapping
+- **Distributed Control Analysis**: Understand system-wide communication patterns
+
 ### Advanced Features
 - **Complete Round-Trip Conversion**: L5X ↔ ST ↔ L5X with validation
 - **Intermediate Representation (IR)**: Internal data model for validation
@@ -39,10 +61,7 @@ A modern Python 3 implementation for converting between L5X files (Allen Bradley
 - **Guardrail Validation**: Optional `--use-ir` flag for enhanced validation
 - **Industrial-Grade Reliability**: Handles complex Rockwell automation projects
 - **Metadata Comparison**: Tools to analyze differences between overlay and non-overlay conversions
-- **IR Export and Analysis**: Export IR components to JSON for downstream processing
-- **Interactive Querying API**: Programmatic access to IR components with search and analysis
-- **Control Flow Analysis**: Extract and analyze control flow structures from routines
-- **Cross-Program Interaction Detection**: Identify dependencies between programs and controllers
+- **Graph Visualization**: Export control flow and data flow graphs for analysis
 
 ## Installation
 
@@ -127,6 +146,30 @@ python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_dump.json --include 
 
 # Export specific components only
 python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/tags_only.json --include tags
+
+# Export semantic analysis
+python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_semantic.json --include semantic
+
+# Export control flow graph (CFG)
+python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_cfg.json --mode cfg
+
+# Export CFG with graph visualization
+python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_cfg.json --mode cfg --export-graphs
+
+#### Multi-PLC Analysis
+```bash
+# Analyze entire directory of PLCs
+python -m l5x_st_compiler.cli analyze-multi -d ./swatfiles -o interdependence.json -v
+
+# Analyze specific PLC pairs with L5K overlays
+python -m l5x_st_compiler.cli analyze-multi \
+  --l5x P1.L5X --l5k P1.L5K \
+  --l5x P2.L5X --l5k P2.L5K \
+  -o test_pairing.json
+
+# Require L5K overlays for all PLCs
+python -m l5x_st_compiler.cli analyze-multi -d ./swatfiles --require-overlay -o strict.json
+```
 ```
 
 ### Python API
@@ -245,6 +288,80 @@ print(f"Tag P101 referenced by: {dependencies['referenced_by']}")
 # Get project summary
 summary = query.get_project_summary()
 print(f"Project has {summary['tags']['total_tags']} total tags")
+
+#### Semantic Analysis
+```python
+from l5x_st_compiler.export_ir import export_ir_to_json
+
+# Export semantic analysis
+export_data = export_ir_to_json(
+    ir_project=ir_project,
+    output_path="semantic_analysis.json",
+    include=["semantic"],
+    pretty_print=True
+)
+
+# Access semantic analysis results
+semantic = export_data.get("semantic", {})
+tag_summary = semantic.get("tag_summary", {})
+interdependencies = semantic.get("interdependencies", [])
+annotations = semantic.get("control_flow_annotations", {})
+```
+
+#### Control Flow Graph Analysis
+```python
+from l5x_st_compiler.export_ir import export_ir_to_json, export_cfg_to_graphs
+
+# Export CFG analysis
+export_data = export_ir_to_json(
+    ir_project=ir_project,
+    output_path="cfg_analysis.json",
+    include=["cfg"],
+    pretty_print=True
+)
+
+# Export graphs for visualization
+cfg_data = export_data.get("cfg", {})
+graph_files = export_cfg_to_graphs(cfg_data, "out")
+
+# Access generated files
+print(f"CFG DOT: {graph_files['cfg_dot']}")
+print(f"Data Flow DOT: {graph_files['dataflow_dot']}")
+print(f"CFG GraphML: {graph_files['cfg_graphml']}")
+print(f"Data Flow GraphML: {graph_files['dataflow_graphml']}")
+```
+
+#### Multi-PLC Analysis
+```python
+from l5x_st_compiler.project_ir import ProjectIR
+from pathlib import Path
+
+# Load multiple PLCs with L5K overlays
+l5x_files = [Path("P1.L5X"), Path("P2.L5X"), Path("P3.L5X")]
+l5k_overlays = {
+    "P1": Path("P1.L5K"),
+    "P2": Path("P2.L5K"),
+    "P3": Path("P3.L5K")
+}
+
+# Create multi-PLC analysis
+project_ir, missing_overlays = ProjectIR.from_files(l5x_files, l5k_overlays)
+
+# Find cross-PLC dependencies
+dependencies = project_ir.find_cross_plc_dependencies()
+for dep in dependencies:
+    print(f"{dep.tag}: {dep.writer} → {dep.readers}")
+
+# Detect conflicts
+conflicts = project_ir.detect_conflicting_tags()
+for conflict in conflicts:
+    print(f"Conflict in {conflict.tag}: {conflict.conflict_type}")
+
+# Export analysis
+summary = project_ir.export_summary(Path("interdependence.json"))
+print(f"Found {len(summary['shared_tags'])} shared tags")
+print(f"Found {len(summary['conflicting_tags'])} conflicts")
+```
 ```
 
 ## Project Structure
@@ -261,6 +378,9 @@ l5x2ST/
 │   ├── fbd_translator.py     # FBD to ST translator
 │   ├── ir_converter.py       # IR conversion system
 │   ├── l5k_overlay.py        # L5K file parser and overlay system
+│   ├── export_ir.py          # IR export and analysis system
+│   ├── query.py              # Interactive IR querying API
+│   ├── project_ir.py         # Multi-PLC analysis system
 │   ├── l5x2st.py            # L5X to ST converter
 │   ├── st2l5x.py            # ST to L5X converter
 │   └── cli.py               # Command-line interface
@@ -268,6 +388,8 @@ l5x2ST/
 │   ├── basic_usage.py       # Basic usage examples
 │   ├── complex_st_example.py # Complex ST example
 │   ├── ir_roundtrip_test.py # IR round-trip testing
+│   ├── ir_export_example.py # IR export and querying examples
+│   ├── graph_export_example.py # CFG graph export examples
 │   ├── l5x_compare.py       # L5X comparison tool
 │   ├── l5x_roundtrip_test.py # L5X round-trip testing
 │   ├── l5k_overlay_example.py # L5K overlay usage examples
@@ -368,6 +490,34 @@ pip install dist/l5x-st-compiler-2.0.0.tar.gz
 - **L5K Overlay**: Enhanced project context from L5K files
 - **Metadata Analysis**: Tools for comparing conversion differences
 
+## Analysis Features
+
+### Semantic Analysis
+The semantic analysis system provides higher-level understanding of PLC code:
+
+- **Tag Usage Summary**: Classify tags as inputs, outputs, or internal based on usage patterns
+- **Inter-Routine Dependencies**: Detect data flow between routines based on shared tag reads/writes
+- **Control Flow Annotations**: Rule-based annotations for control flow branches (e.g., "shutdown_trigger")
+- **Export Format**: JSON output with `tag_summary`, `interdependencies`, and `control_flow_annotations`
+
+### Control Flow Graph (CFG) Analysis
+The CFG analysis provides static analysis capabilities similar to reverse engineering tools:
+
+- **Basic Block Analysis**: Parse ST routines into basic blocks with single entry/exit points
+- **Data Flow Analysis**: Track defs (writes) and uses (reads) for each block
+- **Cross-Routine Data Flow**: Detect shared tag dependencies between different routines
+- **Industry Terminology**: Treat routines as functions, tags as symbols, HMI/RIO/UDT fields as named memory references
+- **Graph Export**: DOT and GraphML formats for visualization with Graphviz, Gephi, or NetworkX
+
+### Multi-PLC Analysis
+The multi-PLC analysis system is designed for distributed control systems:
+
+- **Cross-PLC Dependencies**: Detect tags written by one PLC and read by others
+- **Shared Tag Analysis**: Identify communication patterns between multiple PLCs
+- **Conflict Detection**: Find naming conflicts and data type mismatches across PLCs
+- **L5K Overlay Integration**: Enhanced context with task and program mapping
+- **Distributed Control Analysis**: Understand system-wide communication patterns
+
 ## L5K Overlay System
 
 The L5K overlay system enhances L5X to ST conversion by extracting additional project context from L5K files. This provides:
@@ -394,6 +544,22 @@ python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay p
 
 # Compare with and without overlay
 python examples/validate_l5k_overlay_diff.py -i project.L5X -l project.L5K
+
+### Analysis Examples
+```bash
+# Semantic analysis
+python -m l5x_st_compiler.cli export-ir -i P1.L5X -o semantic.json --include semantic
+
+# CFG analysis with graph export
+python -m l5x_st_compiler.cli export-ir -i P1.L5X -o cfg.json --mode cfg --export-graphs
+
+# Multi-PLC analysis
+python -m l5x_st_compiler.cli analyze-multi -d ./swatfiles -o interdependence.json -v
+
+# Run example scripts
+python examples/ir_export_example.py
+python examples/graph_export_example.py
+```
 ```
 
 ## Supported Instructions
