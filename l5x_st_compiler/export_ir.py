@@ -139,12 +139,115 @@ class ControlFlowAnalyzer:
     
     def _analyze_fbd_control_flow(self, content: str) -> Dict[str, Any]:
         """Analyze Function Block Diagram control flow."""
-        # Simplified FBD analysis
-        return {
-            "type": "function_block_diagram",
-            "content": content,
-            "note": "FBD control flow analysis requires detailed parsing of block connections"
-        }
+        # Enhanced FBD analysis - parse function blocks and connections
+        control_flow = []
+        
+        try:
+            # Parse FBD content as XML
+            import xml.etree.ElementTree as ET
+            from io import StringIO
+            
+            # Wrap content in a root element if it's not already XML
+            if not content.strip().startswith('<'):
+                return {
+                    "type": "function_block_diagram",
+                    "content": content,
+                    "note": "FBD content not in XML format"
+                }
+            
+            # Parse the FBD XML content
+            root = ET.fromstring(f"<root>{content}</root>")
+            
+            # Extract function blocks
+            function_blocks = {}
+            for fb_elem in root.findall('.//AddOnInstruction'):
+                fb_id = fb_elem.get('ID')
+                fb_name = fb_elem.get('Name', 'Unknown')
+                fb_operand = fb_elem.get('Operand', 'Unknown')
+                visible_pins = fb_elem.get('VisiblePins', '').split()
+                
+                function_blocks[fb_id] = {
+                    "name": fb_name,
+                    "operand": fb_operand,
+                    "visible_pins": visible_pins
+                }
+            
+            # Extract connections/wires
+            connections = []
+            for wire_elem in root.findall('.//Wire'):
+                from_id = wire_elem.get('FromID')
+                to_id = wire_elem.get('ToID')
+                to_param = wire_elem.get('ToParam')
+                
+                connections.append({
+                    "from_id": from_id,
+                    "to_id": to_id,
+                    "to_param": to_param
+                })
+            
+            # Extract input references
+            input_refs = {}
+            for iref_elem in root.findall('.//IRef'):
+                ref_id = iref_elem.get('ID')
+                operand = iref_elem.get('Operand', 'Unknown')
+                
+                input_refs[ref_id] = operand
+            
+            # Build control flow from connections
+            for connection in connections:
+                from_id = connection['from_id']
+                to_id = connection['to_id']
+                to_param = connection['to_param']
+                
+                # Get source and destination info
+                source = input_refs.get(from_id, f"Input_{from_id}")
+                dest_fb = function_blocks.get(to_id, {})
+                dest_name = dest_fb.get('name', f"Block_{to_id}")
+                dest_operand = dest_fb.get('operand', 'Unknown')
+                
+                control_flow.append({
+                    "type": "fbd_connection",
+                    "source": source,
+                    "destination": {
+                        "block": dest_name,
+                        "instance": dest_operand,
+                        "parameter": to_param
+                    },
+                    "connection_type": "data_flow"
+                })
+            
+            # Group by function blocks for better structure
+            fb_groups = {}
+            for fb_id, fb_info in function_blocks.items():
+                fb_connections = [conn for conn in connections if conn['to_id'] == fb_id]
+                fb_inputs = {}
+                
+                for conn in fb_connections:
+                    param = conn['to_param']
+                    source = input_refs.get(conn['from_id'], f"Input_{conn['from_id']}")
+                    fb_inputs[param] = source
+                
+                fb_groups[fb_info['operand']] = {
+                    "block_type": fb_info['name'],
+                    "inputs": fb_inputs,
+                    "visible_pins": fb_info['visible_pins']
+                }
+            
+            return {
+                "type": "function_block_diagram",
+                "control_flow": control_flow,
+                "function_blocks": fb_groups,
+                "total_blocks": len(function_blocks),
+                "total_connections": len(connections)
+            }
+            
+        except Exception as e:
+            return {
+                "type": "function_block_diagram",
+                "content": content,
+                "error": f"FBD parsing error: {str(e)}",
+                "note": "FBD control flow analysis requires detailed parsing of block connections"
+            }
 
 
 class InteractionAnalyzer:

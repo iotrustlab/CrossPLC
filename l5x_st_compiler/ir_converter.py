@@ -546,10 +546,17 @@ class IRConverter:
             return ""
 
     def _extract_fbd_content_from_xml(self, routine_elem) -> str:
-        """Extract FBD content and translate to ST."""
+        """Extract FBD content as XML for control flow analysis."""
         try:
-            # Find FBD elements - pass the routine element itself to the translator
-            return translate_fbd_to_st(routine_elem)
+            # Find FBDContent element
+            fbd_content = routine_elem.find('.//FBDContent')
+            if fbd_content is not None:
+                # Return the FBD content as XML string for parsing
+                import xml.etree.ElementTree as ET
+                return ET.tostring(fbd_content, encoding='unicode')
+            else:
+                # Fallback to ST translation if no FBDContent found
+                return translate_fbd_to_st(routine_elem)
             
         except Exception as e:
             logger.warning(f"Error extracting FBD content from XML: {e}")
