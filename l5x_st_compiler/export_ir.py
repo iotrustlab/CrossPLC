@@ -28,6 +28,7 @@ class ExportComponent(Enum):
     ROUTINES = "routines"
     PROGRAMS = "programs"
     SEMANTIC = "semantic"  # New semantic analysis component
+    CFG = "cfg" # New CFG analysis component
 
 
 class ControlFlowAnalyzer:
@@ -589,6 +590,292 @@ class SemanticAnalyzer:
         return annotations
 
 
+class CFGAnalyzer:
+    """Analyze control flow graphs and data flow for ST routines."""
+    
+    def __init__(self):
+        self.block_counter = 0
+    
+    def analyze_cfg(self, ir_project: IRProject) -> Dict[str, Any]:
+        """Generate control flow graphs for all routines."""
+        cfg_data = {}
+        
+        for program in ir_project.programs:
+            for routine in program.routines:
+                if routine.content:
+                    routine_cfg = self._build_routine_cfg(routine)
+                    if routine_cfg:
+                        cfg_data[routine.name] = routine_cfg
+        
+        return cfg_data
+    
+    def _build_routine_cfg(self, routine: IRRoutine) -> Dict[str, Any]:
+        """Build control flow graph for a single routine."""
+        if not routine.content:
+            return None
+        
+        # Parse ST content into basic blocks
+        blocks = self._parse_st_into_blocks(routine.content)
+        
+        # Build control flow graph
+        cfg = {
+            "blocks": blocks,
+            "entry": "entry" if blocks else None
+        }
+        
+        return cfg
+    
+    def _parse_st_into_blocks(self, content: str) -> List[Dict[str, Any]]:
+        """Parse ST content into basic blocks with control flow."""
+        blocks = []
+        lines = content.split('\n')
+        
+        # Create entry block
+        entry_block = {
+            "block_id": "entry",
+            "instructions": [],
+            "successors": []
+        }
+        
+        current_block = entry_block
+        block_stack = []  # For nested control structures
+        
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('//'):
+                continue
+            
+            # Handle different ST constructs
+            if self._is_control_structure(line):
+                # End current block and start new control block
+                if current_block["instructions"]:
+                    blocks.append(current_block)
+                
+                control_block = self._create_control_block(line)
+                blocks.append(control_block)
+                
+                # Update successors
+                if blocks:
+                    prev_block = blocks[-2] if len(blocks) > 1 else entry_block
+                    prev_block["successors"].append(control_block["block_id"])
+                
+                current_block = control_block
+                block_stack.append(control_block)
+                
+            elif self._is_end_structure(line):
+                # End control structure
+                if block_stack:
+                    control_block = block_stack.pop()
+                    # Add successor to next block
+                    if blocks:
+                        control_block["successors"].append(f"b{len(blocks) + 1}")
+                
+                # Create next block
+                next_block = {
+                    "block_id": f"b{len(blocks) + 1}",
+                    "instructions": [],
+                    "successors": []
+                }
+                blocks.append(next_block)
+                current_block = next_block
+                
+            else:
+                # Regular instruction
+                current_block["instructions"].append(line)
+        
+        # Add final block if it has instructions
+        if current_block["instructions"]:
+            blocks.append(current_block)
+        
+        # Add data flow analysis to each block
+        for block in blocks:
+            block.update(self._analyze_block_data_flow(block))
+        
+        return blocks
+    
+    def _is_control_structure(self, line: str) -> bool:
+        """Check if line starts a control structure."""
+        line_upper = line.upper()
+        return (line_upper.startswith('IF ') or 
+                line_upper.startswith('FOR ') or 
+                line_upper.startswith('WHILE ') or
+                line_upper.startswith('CASE '))
+    
+    def _is_end_structure(self, line: str) -> bool:
+        """Check if line ends a control structure."""
+        line_upper = line.upper()
+        return (line_upper == 'END_IF' or 
+                line_upper == 'END_FOR' or 
+                line_upper == 'END_WHILE' or
+                line_upper == 'END_CASE')
+    
+    def _create_control_block(self, line: str) -> Dict[str, Any]:
+        """Create a control flow block."""
+        self.block_counter += 1
+        block_id = f"b{self.block_counter}"
+        
+        if line.upper().startswith('IF '):
+            # Extract condition
+            condition = line[3:].strip()
+            if condition.endswith('THEN'):
+                condition = condition[:-4].strip()
+            
+            return {
+                "block_id": block_id,
+                "type": "branch",
+                "condition": condition,
+                "true_successor": f"b{self.block_counter + 1}",
+                "false_successor": f"b{self.block_counter + 2}",
+                "instructions": [],
+                "successors": []
+            }
+        else:
+            # Other control structures
+            return {
+                "block_id": block_id,
+                "type": "control",
+                "condition": line,
+                "instructions": [],
+                "successors": []
+            }
+    
+    def _analyze_block_data_flow(self, block: Dict[str, Any]) -> Dict[str, List[str]]:
+        """Analyze data flow (defs/uses) for a block."""
+        defs = set()
+        uses = set()
+        
+        for instruction in block.get("instructions", []):
+            # Analyze assignment (defs)
+            if ':=' in instruction:
+                parts = instruction.split(':=')
+                if len(parts) == 2:
+                    lhs = parts[0].strip()
+                    rhs = parts[1].strip().rstrip(';')
+                    
+                    # LHS is a def
+                    tag = self._extract_tag_from_expression(lhs)
+                    if tag:
+                        defs.add(tag)
+                    
+                    # RHS tags are uses
+                    rhs_tags = self._extract_tags_from_expression(rhs)
+                    uses.update(rhs_tags)
+            
+            # Analyze condition (uses)
+            condition = block.get("condition", "")
+            if condition:
+                condition_tags = self._extract_tags_from_expression(condition)
+                uses.update(condition_tags)
+        
+        return {
+            "defs": list(defs),
+            "uses": list(uses)
+        }
+    
+    def _extract_tag_from_expression(self, expr: str) -> Optional[str]:
+        """Extract a single tag from an expression."""
+        import re
+        # Match patterns like: TagName, TagName.Field, TagName[Index]
+        tag_pattern = r'\b[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*(\[[^\]]*\])?\b'
+        matches = re.findall(tag_pattern, expr)
+        if matches:
+            return matches[0][0]  # Return first match
+        return None
+    
+    def _extract_tags_from_expression(self, expr: str) -> Set[str]:
+        """Extract all tags from an expression."""
+        import re
+        tags = set()
+        
+        # Match patterns like: TagName, TagName.Field, TagName[Index]
+        tag_pattern = r'\b[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*(\[[^\]]*\])?\b'
+        matches = re.findall(tag_pattern, expr)
+        
+        for match in matches:
+            if match[0]:  # First group contains the tag name
+                # Clean up the tag name (remove array indices, etc.)
+                tag_name = match[0]
+                # Remove array indices if present
+                if '[' in tag_name:
+                    tag_name = tag_name.split('[')[0]
+                tags.add(tag_name)
+        
+        return tags
+    
+    def analyze_inter_routine_dataflow(self, ir_project: IRProject) -> List[Dict[str, str]]:
+        """Analyze cross-routine data flow via shared tags."""
+        dataflow = []
+        
+        # Build tag usage map per routine
+        routine_tag_usage = {}
+        
+        for program in ir_project.programs:
+            for routine in program.routines:
+                routine_name = routine.name
+                defs = set()
+                uses = set()
+                
+                if routine.content:
+                    # Analyze routine content for defs/uses
+                    lines = routine.content.split('\n')
+                    for line in lines:
+                        line = line.strip()
+                        if not line or line.startswith('//'):
+                            continue
+                        
+                        # Analyze assignments (defs)
+                        if ':=' in line:
+                            parts = line.split(':=')
+                            if len(parts) == 2:
+                                lhs = parts[0].strip()
+                                rhs = parts[1].strip().rstrip(';')
+                                
+                                # LHS is a def
+                                tag = self._extract_tag_from_expression(lhs)
+                                if tag:
+                                    defs.add(tag)
+                                
+                                # RHS tags are uses
+                                rhs_tags = self._extract_tags_from_expression(rhs)
+                                uses.update(rhs_tags)
+                
+                routine_tag_usage[routine_name] = {
+                    "defs": defs,
+                    "uses": uses
+                }
+        
+        # Find cross-routine data flow
+        routines = list(routine_tag_usage.keys())
+        for i, routine1 in enumerate(routines):
+            for routine2 in routines[i+1:]:
+                defs1 = routine_tag_usage[routine1]["defs"]
+                uses2 = routine_tag_usage[routine2]["uses"]
+                defs2 = routine_tag_usage[routine2]["defs"]
+                uses1 = routine_tag_usage[routine1]["uses"]
+                
+                # Check if routine1 writes to tags that routine2 reads
+                shared_tags = defs1 & uses2
+                for tag in shared_tags:
+                    dataflow.append({
+                        "source": routine1,
+                        "target": routine2,
+                        "tag": tag,
+                        "type": "write_to_read"
+                    })
+                
+                # Check if routine2 writes to tags that routine1 reads
+                shared_tags = defs2 & uses1
+                for tag in shared_tags:
+                    dataflow.append({
+                        "source": routine2,
+                        "target": routine1,
+                        "tag": tag,
+                        "type": "write_to_read"
+                    })
+        
+        return dataflow 
+
+
 def export_ir_to_json(
     ir_project: IRProject,
     output_path: str,
@@ -661,6 +948,10 @@ def export_ir_to_json(
     # Export semantic analysis
     if ExportComponent.SEMANTIC in export_components:
         export_data["semantic"] = _export_semantic(ir_project)
+    
+    # Export CFG analysis
+    if ExportComponent.CFG in export_components:
+        export_data["cfg"] = _export_cfg(ir_project)
     
     # Write to file
     output_path = Path(output_path)
@@ -889,7 +1180,7 @@ def _export_programs(ir_project: IRProject) -> Dict[str, Any]:
         "summary": {
             "total_programs": len(programs)
         }
-    } 
+    }
 
 
 def _export_semantic(ir_project: IRProject) -> Dict[str, Any]:
@@ -918,5 +1209,30 @@ def _export_semantic(ir_project: IRProject) -> Dict[str, Any]:
             "total_routines": total_routines,
             "total_dependencies": total_dependencies,
             "total_annotations": total_annotations
+        }
+    }
+
+
+def _export_cfg(ir_project: IRProject) -> Dict[str, Any]:
+    """Export control flow graph analysis."""
+    analyzer = CFGAnalyzer()
+    
+    # Generate CFG for all routines
+    cfg_data = analyzer.analyze_cfg(ir_project)
+    
+    # Analyze inter-routine data flow
+    inter_routine_dataflow = analyzer.analyze_inter_routine_dataflow(ir_project)
+    
+    # Calculate summary statistics
+    total_blocks = sum(len(cfg.get("blocks", [])) for cfg in cfg_data.values())
+    total_dataflow_edges = len(inter_routine_dataflow)
+    
+    return {
+        "cfg": cfg_data,
+        "inter_routine_dataflow": inter_routine_dataflow,
+        "summary": {
+            "total_routines_with_cfg": len(cfg_data),
+            "total_blocks": total_blocks,
+            "total_dataflow_edges": total_dataflow_edges
         }
     } 

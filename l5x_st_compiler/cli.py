@@ -532,7 +532,9 @@ Examples:
         export_ir_parser.add_argument('--input', '-i', required=True, help='Input L5X file')
         export_ir_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
         export_ir_parser.add_argument('--include', type=str, default='tags,control_flow', 
-                                     help='Components to include (comma-separated: tags,control_flow,data_types,function_blocks,interactions,routines,programs,semantic)')
+                                     help='Components to include (comma-separated: tags,control_flow,data_types,function_blocks,interactions,routines,programs,semantic,cfg)')
+        export_ir_parser.add_argument('--mode', type=str, choices=['default', 'cfg'], default='default',
+                                     help='Export mode: default or cfg (control flow graph)')
         export_ir_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
         
         try:
@@ -562,6 +564,12 @@ Examples:
                 
                 # Parse include components
                 include_components = [comp.strip() for comp in export_ir_args.include.split(',')]
+                
+                # Handle mode-specific behavior
+                if export_ir_args.mode == 'cfg':
+                    # For CFG mode, override include to only export CFG
+                    include_components = ['cfg']
+                    print(f"🔧 CFG mode enabled - exporting control flow graph")
                 
                 # Export IR to JSON
                 print(f"📤 Exporting IR components: {', '.join(include_components)}")
