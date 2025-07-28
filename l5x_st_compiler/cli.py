@@ -580,7 +580,7 @@ Examples:
                 print(f"  - Controller: {metadata.get('source_controller', 'Unknown')}")
                 print(f"  - Programs: {metadata.get('total_programs', 0)}")
                 print(f"  - Routines: {metadata.get('total_routines', 0)}")
-                print(f"  - Exported components: {', '.join(export_ir_args.include)}")
+                print(f"  - Exported components: {', '.join(include_components)}")
                 
                 if export_ir_args.verbose:
                     print(f"\n📋 Detailed Summary:")

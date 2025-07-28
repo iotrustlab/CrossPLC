@@ -394,8 +394,17 @@ class IRConverter:
                 st_content = routine_element.find('.//STContent')
                 if st_content is not None:
                     for line_elem in st_content.findall('.//Line'):
+                        # Get CDATA content from the line element
                         if line_elem.text:
-                            content_lines.append(line_elem.text.strip())
+                            # Clean up the text - remove extra whitespace and newlines
+                            cleaned_text = line_elem.text.strip()
+                            if cleaned_text:  # Only add non-empty lines
+                                content_lines.append(cleaned_text)
+                        # Also check for any child text content
+                        elif len(line_elem) == 0 and line_elem.text is not None:
+                            cleaned_text = line_elem.text.strip()
+                            if cleaned_text:
+                                content_lines.append(cleaned_text)
                 else:
                     # Fallback to Text format (older L5X files)
                     for text_elem in routine_element.findall('.//Text'):
@@ -492,9 +501,35 @@ class IRConverter:
                 # First try STContent format (newer L5X files)
                 st_content = routine_elem.find('.//STContent')
                 if st_content is not None:
-                    for line_elem in st_content.findall('.//Line'):
-                        if line_elem.text:
-                            content_lines.append(line_elem.text.strip())
+                    lines = st_content.findall('.//Line')
+                    for line_elem in lines:
+                        # Get CDATA content from the line element
+                        
+                        # First try to get content from CDATAContent elements
+                        cdata_elem = line_elem.find('.//CDATAContent')
+                        if cdata_elem is not None and cdata_elem.text:
+                            cleaned_text = cdata_elem.text.strip()
+                            if cleaned_text:  # Only add non-empty lines
+                                content_lines.append(cleaned_text)
+                        elif line_elem.text:
+                            # Clean up the text - remove extra whitespace and newlines
+                            cleaned_text = line_elem.text.strip()
+                            if cleaned_text:  # Only add non-empty lines
+                                content_lines.append(cleaned_text)
+                        # Also check for any child text content
+                        elif len(line_elem) == 0 and line_elem.text is not None:
+                            cleaned_text = line_elem.text.strip()
+                            if cleaned_text:
+                                content_lines.append(cleaned_text)
+                        # Handle CDATA content that might be in child text nodes
+                        else:
+                            # Try to get text from all child elements
+                            for child in line_elem:
+                                if child.text:
+                                    cleaned_text = child.text.strip()
+                                    if cleaned_text:
+                                        content_lines.append(cleaned_text)
+                                        break
                 else:
                     # Fallback to Text format (older L5X files)
                     for text_elem in routine_elem.findall('.//Text'):
