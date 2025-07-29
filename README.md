@@ -53,6 +53,17 @@ A modern Python 3 implementation for converting between L5X files (Allen Bradley
 - **Conflict Detection**: Find naming conflicts and data type mismatches across PLCs
 - **L5K Overlay Integration**: Enhanced context with task and program mapping
 - **Distributed Control Analysis**: Understand system-wide communication patterns
+- **Mixed-Platform Support**: Analyze Rockwell L5X and OpenPLC ST files together
+- **Detailed Component Export**: Export specific IR components with `--include` option
+
+### OpenPLC Integration
+- **OpenPLC ST Parser**: Parse OpenPLC `.st` files into IR format
+- **Hardware I/O Mapping**: Support for `AT %IW0`, `AT %QX0.4` syntax
+- **Variable Declarations**: Handle multiple VAR blocks within PROGRAM sections
+- **Data Type Mapping**: Map OpenPLC types (BOOL, INT, REAL) to IR format
+- **Mixed-Platform Analysis**: Analyze Rockwell + OpenPLC systems together
+- **Source Type Tracking**: Identify "rockwell" vs "openplc" sources
+- **Controller Metadata**: Track source type, overlay status, validity
 
 ### Advanced Features
 - **Complete Round-Trip Conversion**: L5X ↔ ST ↔ L5X with validation
@@ -169,7 +180,39 @@ python -m l5x_st_compiler.cli analyze-multi \
 
 # Require L5K overlays for all PLCs
 python -m l5x_st_compiler.cli analyze-multi -d ./swatfiles --require-overlay -o strict.json
+
+# Analyze with detailed component export
+python -m l5x_st_compiler.cli analyze-multi \
+  --l5x P1.L5X --st openplc.st \
+  -o detailed.json \
+  --include tags,control_flow,controllers,shared_tags
+
+# Export specific components only
+python -m l5x_st_compiler.cli analyze-multi \
+  --st controller.st \
+  -o tags_only.json \
+  --include tags
 ```
+
+#### OpenPLC Integration
+```bash
+# Analyze OpenPLC ST files
+python -m l5x_st_compiler.cli analyze-multi --st controller.st -o openplc.json
+
+# Mixed Rockwell + OpenPLC analysis
+python -m l5x_st_compiler.cli analyze-multi \
+  --l5x P1.L5X --l5k P1.L5K \
+  --st openplc_controller.st \
+  -o mixed_analysis.json
+
+# Directory analysis with OpenPLC files
+python -m l5x_st_compiler.cli analyze-multi -d ./mixed_project -o analysis.json
+
+# Detailed component export for OpenPLC
+python -m l5x_st_compiler.cli analyze-multi \
+  --st controller.st \
+  -o detailed.json \
+  --include tags,control_flow,controllers
 ```
 
 ### Python API
@@ -362,6 +405,43 @@ summary = project_ir.export_summary(Path("interdependence.json"))
 print(f"Found {len(summary['shared_tags'])} shared tags")
 print(f"Found {len(summary['conflicting_tags'])} conflicts")
 ```
+
+#### OpenPLC Integration
+```python
+from l5x_st_compiler.openplc_parser import OpenPLCParser
+from l5x_st_compiler.project_ir import ProjectIR
+from pathlib import Path
+
+# Parse OpenPLC ST file
+parser = OpenPLCParser()
+ir_project = parser.parse(Path("controller.st"))
+
+# Access OpenPLC-specific information
+print(f"Controller: {ir_project.controller.name}")
+print(f"Source type: {ir_project.source_type}")
+print(f"Tags: {len(ir_project.controller.tags)}")
+
+# Mixed-platform analysis
+project_ir = ProjectIR.from_files([
+    Path("P1.L5X"),  # Rockwell
+    Path("controller.st")  # OpenPLC
+])
+
+# Export mixed analysis with detailed components
+summary = project_ir.export_summary(
+    Path("mixed_analysis.json"),
+    include_components=["tags", "control_flow", "controllers", "shared_tags"]
+)
+
+# Access controller metadata
+for controller in summary.get("controllers", []):
+    print(f"{controller['name']}: {controller['source']} platform")
+
+# Access detailed components
+detailed = summary.get("detailed_components", {})
+for plc_name, components in detailed.items():
+    print(f"{plc_name}: {list(components.keys())} components available")
+```
 ```
 
 ## Project Structure
@@ -381,6 +461,7 @@ l5x2ST/
 │   ├── export_ir.py          # IR export and analysis system
 │   ├── query.py              # Interactive IR querying API
 │   ├── project_ir.py         # Multi-PLC analysis system
+│   ├── openplc_parser.py     # OpenPLC ST parser
 │   ├── l5x2st.py            # L5X to ST converter
 │   ├── st2l5x.py            # ST to L5X converter
 │   └── cli.py               # Command-line interface
@@ -394,7 +475,8 @@ l5x2ST/
 │   ├── l5x_roundtrip_test.py # L5X round-trip testing
 │   ├── l5k_overlay_example.py # L5K overlay usage examples
 │   ├── validate_l5k_overlay_diff.py # Overlay difference analysis
-│   └── validation_test.py   # Comprehensive validation
+│   ├── validation_test.py   # Comprehensive validation
+│   └── test_openplc.st      # OpenPLC test file
 ├── tests/                    # Test suite
 │   ├── __init__.py
 │   ├── test_l5x2st.py       # Tests for L5X2ST converter
@@ -603,7 +685,6 @@ python examples/graph_export_example.py
 - [ ] Support for more advanced motion instructions
 - [ ] Performance optimizations for large projects
 - [ ] Better error reporting and diagnostics
-- [ ] Integration with OpenPLC for ST validation
 
 ## Contributing
 
