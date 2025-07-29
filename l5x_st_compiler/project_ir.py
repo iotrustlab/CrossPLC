@@ -327,8 +327,11 @@ class ProjectIR:
         
         return conflicts
     
-    def export_summary(self, output_path: Path) -> Dict[str, Any]:
+    def export_summary(self, output_path: Path, include_components: Optional[List[str]] = None) -> Dict[str, Any]:
         """Export a structured JSON report of multi-PLC analysis."""
+        if include_components is None:
+            include_components = ['shared_tags', 'conflicts', 'controllers']
+        
         # Find cross-PLC dependencies
         dependencies = self.find_cross_plc_dependencies()
         
@@ -363,30 +366,71 @@ class ProjectIR:
                 "plc_names": self.plc_names,
                 "total_shared_tags": len(shared_tags),
                 "total_conflicts": len(conflicting_tags)
-            },
-            "controllers": [],
-            "shared_tags": shared_tags,
-            "conflicting_tags": conflicting_tags,
-            "plc_summary": {}
+            }
         }
         
-        # Add per-PLC summary and controller info
-        for plc_name, ir_project in self.plc_ir_map.items():
-            # Add to plc_summary
-            summary["plc_summary"][plc_name] = {
-                "controller_tags": len(ir_project.controller.tags),
-                "programs": len(ir_project.programs),
-                "routines": sum(len(p.routines) for p in ir_project.programs)
-            }
+        # Add components based on include_components
+        if 'shared_tags' in include_components:
+            summary["shared_tags"] = shared_tags
             
-            # Add controller info
-            controller_info = {
-                "name": plc_name,
-                "source": ir_project.source_type or "unknown",
-                "has_overlay": plc_name not in missing_overlays if 'missing_overlays' in locals() else False,
-                "valid": True  # We assume valid if we got this far
-            }
-            summary["controllers"].append(controller_info)
+        if 'conflicts' in include_components:
+            summary["conflicting_tags"] = conflicting_tags
+            
+        if 'controllers' in include_components:
+            summary["controllers"] = []
+            summary["plc_summary"] = {}
+            
+            # Add per-PLC summary and controller info
+            for plc_name, ir_project in self.plc_ir_map.items():
+                # Add to plc_summary
+                summary["plc_summary"][plc_name] = {
+                    "controller_tags": len(ir_project.controller.tags),
+                    "programs": len(ir_project.programs),
+                    "routines": sum(len(p.routines) for p in ir_project.programs)
+                }
+                
+                # Add controller info
+                controller_info = {
+                    "name": plc_name,
+                    "source": ir_project.source_type or "unknown",
+                    "has_overlay": plc_name not in missing_overlays if 'missing_overlays' in locals() else False,
+                    "valid": True  # We assume valid if we got this far
+                }
+                summary["controllers"].append(controller_info)
+        
+        # Add detailed IR components if requested
+        if any(comp in include_components for comp in ['tags', 'control_flow', 'data_types', 'function_blocks', 'interactions', 'routines', 'programs', 'semantic', 'cfg']):
+            summary["detailed_components"] = {}
+            
+            for plc_name, ir_project in self.plc_ir_map.items():
+                summary["detailed_components"][plc_name] = {}
+                
+                # Export detailed components using export_ir functionality
+                from .export_ir import export_ir_to_json
+                import tempfile
+                
+                # Create a temporary file for the export
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+                    temp_path = Path(temp_file.name)
+                
+                try:
+                    # Export detailed components for this PLC
+                    export_data = export_ir_to_json(
+                        ir_project=ir_project,
+                        output_path=temp_path,
+                        include=include_components,
+                        pretty_print=False
+                    )
+                    
+                    # Add the exported components to our summary
+                    for component in include_components:
+                        if component in export_data and component in ['tags', 'control_flow', 'data_types', 'function_blocks', 'interactions', 'routines', 'programs', 'semantic', 'cfg']:
+                            summary["detailed_components"][plc_name][component] = export_data[component]
+                            
+                finally:
+                    # Clean up temporary file
+                    if temp_path.exists():
+                        temp_path.unlink()
         
         # Write to file
         import json

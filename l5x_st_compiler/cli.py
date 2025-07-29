@@ -627,6 +627,8 @@ Examples:
         analyze_multi_parser.add_argument('--l5k', action='append', help='L5K file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--st', action='append', help='OpenPLC .st file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
+        analyze_multi_parser.add_argument('--include', type=str, default='shared_tags,conflicts,controllers',
+                                         help='Components to include (comma-separated: shared_tags,conflicts,controllers,tags,control_flow,data_types,function_blocks,interactions,routines,programs,semantic,cfg)')
         analyze_multi_parser.add_argument('--require-overlay', action='store_true', help='Require L5K overlay for all PLCs')
         analyze_multi_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
         
@@ -721,10 +723,14 @@ Examples:
                 elif missing_overlays:
                     print(f"⚠️ Warning: L5K overlays missing for: {', '.join(missing_overlays)}")
                 
+                # Parse include components
+                include_components = [comp.strip() for comp in analyze_multi_args.include.split(',')]
+                
                 # Export analysis
                 output_path = Path(analyze_multi_args.output)
                 print(f"📊 Exporting multi-PLC analysis to {output_path}")
-                summary = project_ir.export_summary(output_path)
+                print(f"📤 Including components: {', '.join(include_components)}")
+                summary = project_ir.export_summary(output_path, include_components)
                 
                 print(f"✅ Successfully exported multi-PLC analysis to {output_path}")
                 
