@@ -625,6 +625,7 @@ Examples:
         analyze_multi_parser.add_argument('--directory', '-d', help='Directory containing L5X and L5K files')
         analyze_multi_parser.add_argument('--l5x', action='append', help='L5X file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--l5k', action='append', help='L5K file path (can be specified multiple times)')
+        analyze_multi_parser.add_argument('--st', action='append', help='OpenPLC .st file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
         analyze_multi_parser.add_argument('--require-overlay', action='store_true', help='Require L5K overlay for all PLCs')
         analyze_multi_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
@@ -650,9 +651,13 @@ Examples:
                         print(f"❌ Error: Directory '{analyze_multi_args.directory}' not found.")
                         sys.exit(1)
                     
-                    # Find all L5X and L5K files
+                    # Find all L5X, L5K, and .st files
                     l5x_files = list(dir_path.glob("*.L5X"))
+                    st_files = list(dir_path.glob("*.st"))
                     l5k_files = list(dir_path.glob("*.L5K"))
+                    
+                    # Combine all files for analysis
+                    all_files = l5x_files + st_files
                     
                     # Match L5X and L5K files by name
                     for l5x_file in l5x_files:
@@ -665,20 +670,30 @@ Examples:
                         if matching_l5k:
                             l5k_overlays[plc_name] = matching_l5k
                     
-                    print(f"📁 Found {len(l5x_files)} L5X files and {len(l5k_files)} L5K files in directory")
+                    print(f"📁 Found {len(l5x_files)} L5X files, {len(st_files)} OpenPLC files, and {len(l5k_files)} L5K files in directory")
                     
-                elif analyze_multi_args.l5x:
-                    # Load from explicit file lists
-                    l5x_files = [Path(f) for f in analyze_multi_args.l5x]
-                    l5k_files = [Path(f) for f in analyze_multi_args.l5k] if analyze_multi_args.l5k else []
+                elif analyze_multi_args.l5x or analyze_multi_args.st:
+                    # Load from explicit file lists (mixed L5X and .st files)
+                    all_files = []
                     
-                    # Match L5X and L5K files by position (assuming they're paired)
-                    for i, l5x_file in enumerate(l5x_files):
-                        plc_name = ProjectIR._extract_plc_name(l5x_file)
-                        if i < len(l5k_files):
-                            l5k_overlays[plc_name] = l5k_files[i]
+                    if analyze_multi_args.l5x:
+                        l5x_files = [Path(f) for f in analyze_multi_args.l5x]
+                        all_files.extend(l5x_files)
+                        
+                        # Handle L5K overlays for L5X files
+                        l5k_files = [Path(f) for f in analyze_multi_args.l5k] if analyze_multi_args.l5k else []
+                        for i, l5x_file in enumerate(l5x_files):
+                            plc_name = ProjectIR._extract_plc_name(l5x_file)
+                            if i < len(l5k_files):
+                                l5k_overlays[plc_name] = l5k_files[i]
                     
-                    print(f"📁 Processing {len(l5x_files)} L5X files with {len(l5k_overlays)} L5K overlays")
+                    if analyze_multi_args.st:
+                        st_files = [Path(f) for f in analyze_multi_args.st]
+                        all_files.extend(st_files)
+                    
+                    print(f"📁 Processing {len(all_files)} files ({len(l5x_files) if 'l5x_files' in locals() else 0} L5X, {len(st_files) if 'st_files' in locals() else 0} OpenPLC) with {len(l5k_overlays)} L5K overlays")
+                    
+
                 
                 else:
                     print("❌ Error: Must specify either --directory or --l5x files")
@@ -697,7 +712,7 @@ Examples:
                 
                 # Create ProjectIR
                 print(f"🔧 Creating multi-PLC analysis...")
-                project_ir, missing_overlays = ProjectIR.from_files(l5x_files, l5k_overlays)
+                project_ir, missing_overlays = ProjectIR.from_files(all_files, l5k_overlays)
                 
                 # Check for missing overlays
                 if missing_overlays and analyze_multi_args.require_overlay:

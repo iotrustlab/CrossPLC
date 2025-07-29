@@ -221,6 +221,7 @@ class IRProgram:
     routines: List[IRRoutine] = field(default_factory=list)
     tags: List[IRTag] = field(default_factory=list)
     local_variables: List[IRTag] = field(default_factory=list)
+    source_type: Optional[str] = None  # "rockwell", "openplc", etc.
 
 
 @dataclass
@@ -232,6 +233,7 @@ class IRController:
     data_types: List[IRDataType] = field(default_factory=list)
     function_blocks: List[IRFunctionBlock] = field(default_factory=list)
     global_variables: List[IRTag] = field(default_factory=list)
+    source_type: Optional[str] = None  # "rockwell", "openplc", etc.
 
 
 @dataclass
@@ -242,6 +244,7 @@ class IRProject:
     modules: List[Any] = field(default_factory=list)
     tasks: List[Any] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    source_type: Optional[str] = None  # "rockwell", "openplc", etc.
 
 
 # Conversion tracking models

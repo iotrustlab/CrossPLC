@@ -53,12 +53,12 @@ class ProjectIR:
         self._build_tag_usage_maps()
     
     @classmethod
-    def from_files(cls, l5x_files: List[Path], l5k_overlays: Optional[Dict[str, Path]] = None) -> "ProjectIR":
+    def from_files(cls, paths: List[Path], l5k_overlays: Optional[Dict[str, Path]] = None) -> "ProjectIR":
         """
-        Create ProjectIR from L5X files with optional L5K overlays.
+        Create ProjectIR from L5X and OpenPLC files with optional L5K overlays.
         
         Args:
-            l5x_files: List of L5X file paths
+            paths: List of file paths (L5X and .st files)
             l5k_overlays: Optional dictionary mapping PLC names to L5K overlay paths
             
         Returns:
@@ -67,25 +67,35 @@ class ProjectIR:
         plc_ir_map = {}
         missing_overlays = []
         
-        # Load each L5X file
-        for l5x_path in l5x_files:
-            plc_name = cls._extract_plc_name(l5x_path)
+        # Load each file
+        for file_path in paths:
+            plc_name = cls._extract_plc_name(file_path)
             
-            # Check if L5K overlay is available
-            l5k_path = None
-            if l5k_overlays and plc_name in l5k_overlays:
-                l5k_path = l5k_overlays[plc_name]
-            elif l5k_overlays:
-                # Try to find matching L5K file
-                l5k_path = cls._find_matching_l5k(l5x_path, l5k_overlays.values())
-            
-            if not l5k_path:
-                missing_overlays.append(plc_name)
-                logger.warning(f"⚠️ L5K overlay not provided for {plc_name} — tag and task context may be incomplete.")
-            
-            # Convert L5X to IR
-            ir_project = cls._load_plc_ir(l5x_path, l5k_path)
-            plc_ir_map[plc_name] = ir_project
+            if file_path.suffix.lower() == '.l5x':
+                # Handle L5X files
+                l5k_path = None
+                if l5k_overlays and plc_name in l5k_overlays:
+                    l5k_path = l5k_overlays[plc_name]
+                elif l5k_overlays:
+                    # Try to find matching L5K file
+                    l5k_path = cls._find_matching_l5k(file_path, l5k_overlays.values())
+                
+                if not l5k_path:
+                    missing_overlays.append(plc_name)
+                    logger.warning(f"⚠️ L5K overlay not provided for {plc_name} — tag and task context may be incomplete.")
+                
+                # Convert L5X to IR
+                ir_project = cls._load_plc_ir(file_path, l5k_path)
+                plc_ir_map[plc_name] = ir_project
+                
+            elif file_path.suffix.lower() == '.st':
+                # Handle OpenPLC .st files
+                ir_project = cls._load_openplc_ir(file_path)
+                plc_ir_map[plc_name] = ir_project
+                logger.info(f"Loaded OpenPLC file: {file_path.name}")
+                
+            else:
+                logger.warning(f"⚠️ Unsupported file type: {file_path.suffix}")
         
         return cls(plc_ir_map), missing_overlays
     
@@ -131,6 +141,16 @@ class ProjectIR:
         # Convert to IR
         ir_converter = IRConverter()
         ir_project = ir_converter.l5x_to_ir(project)
+        
+        return ir_project
+    
+    @classmethod
+    def _load_openplc_ir(cls, st_path: Path) -> IRProject:
+        """Load OpenPLC .st file and convert to IR."""
+        from .openplc_parser import OpenPLCParser
+        
+        parser = OpenPLCParser()
+        ir_project = parser.parse(st_path)
         
         return ir_project
     
@@ -344,18 +364,29 @@ class ProjectIR:
                 "total_shared_tags": len(shared_tags),
                 "total_conflicts": len(conflicting_tags)
             },
+            "controllers": [],
             "shared_tags": shared_tags,
             "conflicting_tags": conflicting_tags,
             "plc_summary": {}
         }
         
-        # Add per-PLC summary
+        # Add per-PLC summary and controller info
         for plc_name, ir_project in self.plc_ir_map.items():
+            # Add to plc_summary
             summary["plc_summary"][plc_name] = {
                 "controller_tags": len(ir_project.controller.tags),
                 "programs": len(ir_project.programs),
                 "routines": sum(len(p.routines) for p in ir_project.programs)
             }
+            
+            # Add controller info
+            controller_info = {
+                "name": plc_name,
+                "source": ir_project.source_type or "unknown",
+                "has_overlay": plc_name not in missing_overlays if 'missing_overlays' in locals() else False,
+                "valid": True  # We assume valid if we got this far
+            }
+            summary["controllers"].append(controller_info)
         
         # Write to file
         import json
