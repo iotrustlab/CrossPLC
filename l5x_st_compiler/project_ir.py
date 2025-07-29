@@ -94,6 +94,18 @@ class ProjectIR:
                 plc_ir_map[plc_name] = ir_project
                 logger.info(f"Loaded OpenPLC file: {file_path.name}")
                 
+            elif file_path.suffix.lower() == '.scl':
+                # Handle Siemens SCL files
+                # Look for matching PLCTags.xml file
+                tags_xml_path = file_path.parent / "PLCTags.xml"
+                if not tags_xml_path.exists():
+                    tags_xml_path = None
+                    logger.info(f"No PLCTags.xml found for {file_path.name}")
+                
+                ir_project = cls._load_siemens_scl_ir(file_path, tags_xml_path)
+                plc_ir_map[plc_name] = ir_project
+                logger.info(f"Loaded Siemens SCL file: {file_path.name}")
+                
             else:
                 logger.warning(f"⚠️ Unsupported file type: {file_path.suffix}")
         
@@ -152,6 +164,14 @@ class ProjectIR:
         parser = OpenPLCParser()
         ir_project = parser.parse(st_path)
         
+        return ir_project
+    
+    @classmethod
+    def _load_siemens_scl_ir(cls, scl_path: Path, tags_xml_path: Optional[Path] = None) -> IRProject:
+        """Load Siemens SCL file and optional PLCTags.xml and convert to IR."""
+        from .siemens_scl_parser import SiemensSCLParser
+        parser = SiemensSCLParser()
+        ir_project = parser.parse(scl_path, tags_xml_path)
         return ir_project
     
     def _build_tag_usage_maps(self):

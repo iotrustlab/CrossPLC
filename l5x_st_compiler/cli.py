@@ -626,6 +626,7 @@ Examples:
         analyze_multi_parser.add_argument('--l5x', action='append', help='L5X file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--l5k', action='append', help='L5K file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--st', action='append', help='OpenPLC .st file path (can be specified multiple times)')
+        analyze_multi_parser.add_argument('--scl', action='append', help='Siemens SCL file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
         analyze_multi_parser.add_argument('--include', type=str, default='shared_tags,conflicts,controllers',
                                          help='Components to include (comma-separated: shared_tags,conflicts,controllers,tags,control_flow,data_types,function_blocks,interactions,routines,programs,semantic,cfg)')
@@ -653,13 +654,14 @@ Examples:
                         print(f"❌ Error: Directory '{analyze_multi_args.directory}' not found.")
                         sys.exit(1)
                     
-                    # Find all L5X, L5K, and .st files
+                    # Find all L5X, L5K, .st, and .scl files
                     l5x_files = list(dir_path.glob("*.L5X"))
                     st_files = list(dir_path.glob("*.st"))
+                    scl_files = list(dir_path.glob("*.scl"))
                     l5k_files = list(dir_path.glob("*.L5K"))
                     
                     # Combine all files for analysis
-                    all_files = l5x_files + st_files
+                    all_files = l5x_files + st_files + scl_files
                     
                     # Match L5X and L5K files by name
                     for l5x_file in l5x_files:
@@ -672,10 +674,10 @@ Examples:
                         if matching_l5k:
                             l5k_overlays[plc_name] = matching_l5k
                     
-                    print(f"📁 Found {len(l5x_files)} L5X files, {len(st_files)} OpenPLC files, and {len(l5k_files)} L5K files in directory")
+                    print(f"📁 Found {len(l5x_files)} L5X files, {len(st_files)} OpenPLC files, {len(scl_files)} Siemens SCL files, and {len(l5k_files)} L5K files in directory")
                     
-                elif analyze_multi_args.l5x or analyze_multi_args.st:
-                    # Load from explicit file lists (mixed L5X and .st files)
+                elif analyze_multi_args.l5x or analyze_multi_args.st or analyze_multi_args.scl:
+                    # Load from explicit file lists (mixed L5X, .st, and .scl files)
                     all_files = []
                     
                     if analyze_multi_args.l5x:
@@ -693,7 +695,11 @@ Examples:
                         st_files = [Path(f) for f in analyze_multi_args.st]
                         all_files.extend(st_files)
                     
-                    print(f"📁 Processing {len(all_files)} files ({len(l5x_files) if 'l5x_files' in locals() else 0} L5X, {len(st_files) if 'st_files' in locals() else 0} OpenPLC) with {len(l5k_overlays)} L5K overlays")
+                    if analyze_multi_args.scl:
+                        scl_files = [Path(f) for f in analyze_multi_args.scl]
+                        all_files.extend(scl_files)
+                    
+                    print(f"📁 Processing {len(all_files)} files ({len(l5x_files) if 'l5x_files' in locals() else 0} L5X, {len(st_files) if 'st_files' in locals() else 0} OpenPLC, {len(scl_files) if 'scl_files' in locals() else 0} Siemens SCL) with {len(l5k_overlays)} L5K overlays")
                     
 
                 
