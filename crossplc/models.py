@@ -38,6 +38,7 @@ class RoutineType(Enum):
     RLL = "RLL"
     FBD = "FBD"
     SFC = "SFC"
+    LAD = "LAD"
 
 
 class TagScope(Enum):

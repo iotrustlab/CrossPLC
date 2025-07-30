@@ -85,6 +85,18 @@ A modern Python 3 implementation for translating, analyzing, and unifying contro
 - **Source Type Tracking**: Identify "rockwell", "openplc", "siemens" sources
 - **Project Structure Analysis**: Complete Siemens SCL project analysis
 
+### Siemens LAD/FBD Integration
+- **Siemens LAD/FBD Parser**: Parse Siemens LAD/FBD projects (`.zap15`, `.zap16`, `.zap17`, `.zap18`) into IR format
+- **Project Structure Analysis**: Extract program blocks, connections, and I/O mappings from Siemens TIA Portal projects
+- **Block Type Detection**: Automatically detect LAD (Ladder Logic), FBD (Function Block Diagram), and SCL languages
+- **XML Block Parsing**: Parse Siemens XML program blocks to extract logic elements and connections
+- **Connection Analysis**: Extract wire connections and signal flow between blocks
+- **I/O Tag Extraction**: Identify input and output tags from block interfaces
+- **Mixed-Platform Analysis**: Analyze Rockwell + OpenPLC + Siemens LAD/FBD systems together
+- **Source Type Tracking**: Identify "rockwell", "openplc", "siemens_lad" sources
+- **Project Extraction**: Handle compressed `.zap` files and extract program structure
+- **Structural IR Generation**: Create IR representation of LAD/FBD program structure
+
 ### Advanced Features
 - **Complete Round-Trip Conversion**: L5X ↔ ST ↔ L5X with validation
 - **Intermediate Representation (IR)**: Internal data model for validation
@@ -258,6 +270,31 @@ python -m crossplc.cli analyze-multi \
 python -m crossplc.cli analyze-multi \
   --scl main.scl --scl data.db \
   -o detailed_siemens.json \
+  --include tags,control_flow,controllers
+```
+
+#### Siemens LAD/FBD Integration
+```bash
+# Explore Siemens LAD/FBD project structure
+python -m crossplc.cli explore-lad -i project.zap16 -o lad_structure.json
+
+# Analyze Siemens LAD/FBD projects
+python -m crossplc.cli analyze-multi --l5x project.zap15 -o lad_analysis.json
+
+# Analyze multiple Siemens LAD/FBD projects
+python -m crossplc.cli analyze-multi \
+  --l5x timer.zap15 --l5x pid.zap16 \
+  -o multi_lad.json
+
+# Mixed platform analysis with LAD/FBD
+python -m crossplc.cli analyze-multi \
+  --l5x rockwell.L5X --l5x siemens_lad.zap16 --scl siemens_scl.scl \
+  -o mixed_platform.json
+
+# LAD/FBD with detailed component export
+python -m crossplc.cli analyze-multi \
+  --l5x project.zap16 \
+  -o detailed_lad.json \
   --include tags,control_flow,controllers
 ```
 
@@ -544,6 +581,60 @@ for plc_name, components in detailed.items():
     if "siemens" in plc_name.lower():
         print(f"Siemens {plc_name}: {list(components.keys())} components")
 ```
+
+#### Siemens LAD/FBD Integration
+```python
+from crossplc.siemens_lad_parser import SiemensLADParser
+from crossplc.project_ir import ProjectIR
+from pathlib import Path
+
+# Parse Siemens LAD/FBD project
+parser = SiemensLADParser()
+ir_project = parser.parse_project(Path("project.zap16"))
+
+# Access LAD/FBD-specific information
+print(f"Controller: {ir_project.controller.name}")
+print(f"Source type: {ir_project.source_type}")
+print(f"Tags: {len(ir_project.controller.tags)}")
+
+# Explore project structure
+for program in ir_project.programs:
+    print(f"Program: {program.name}")
+    for routine in program.routines:
+        print(f"  Routine: {routine.name} ({routine.routine_type.value})")
+        print(f"  Content: {routine.content[:100]}...")
+
+# Analyze multiple LAD/FBD projects
+project_ir = ProjectIR.from_files([
+    Path("timer.zap15"),      # Timer project
+    Path("pid.zap16"),        # PID project
+    Path("motor.zap17")       # Motor control project
+])
+
+# Mixed platform analysis with LAD/FBD
+project_ir = ProjectIR.from_files([
+    Path("P1.L5X"),           # Rockwell
+    Path("controller.st"),     # OpenPLC
+    Path("main.scl"),         # Siemens SCL
+    Path("project.zap16")     # Siemens LAD/FBD
+])
+
+# Export mixed analysis with detailed components
+summary = project_ir.export_summary(
+    Path("mixed_platform_analysis.json"),
+    include_components=["tags", "control_flow", "controllers", "shared_tags"]
+)
+
+# Access controller metadata by platform
+for controller in summary.get("controllers", []):
+    print(f"{controller['name']}: {controller['source']} platform")
+
+# Access LAD/FBD-specific components
+detailed = summary.get("detailed_components", {})
+for plc_name, components in detailed.items():
+    if "siemens_lad" in plc_name.lower():
+        print(f"Siemens LAD/FBD {plc_name}: {list(components.keys())} components")
+```
 ```
 
 ## Project Structure
@@ -565,6 +656,7 @@ CrossPLC/
 │   ├── project_ir.py         # Multi-PLC analysis system
 │   ├── openplc_parser.py     # OpenPLC ST parser
 │   ├── siemens_scl_parser.py # Siemens SCL parser
+│   ├── siemens_lad_parser.py # Siemens LAD/FBD parser
 │   ├── l5x2st.py            # L5X to ST converter
 │   ├── st2l5x.py            # ST to L5X converter
 │   └── cli.py               # Command-line interface

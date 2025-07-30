@@ -347,7 +347,7 @@ Examples:
     
     parser.add_argument(
         'command',
-        choices=['l5x2st', 'st2l5x', 'extract-io', 'export-ir', 'analyze-multi'],
+        choices=['l5x2st', 'st2l5x', 'extract-io', 'export-ir', 'analyze-multi', 'explore-lad'],
         help='Command to execute'
     )
     
@@ -775,6 +775,111 @@ Examples:
         except SystemExit:
             # If argparse fails, show help
             analyze_multi_parser.print_help()
+            sys.exit(1)
+    elif args.command == 'explore-lad':
+        # Parse the remaining arguments for explore-lad
+        explore_lad_parser = argparse.ArgumentParser()
+        explore_lad_parser.add_argument('--input', '-i', required=True, help='Input Siemens .zap project file or extracted directory')
+        explore_lad_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
+        explore_lad_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+        
+        try:
+            explore_lad_args = explore_lad_parser.parse_args(remaining)
+            
+            # Call the explore_lad function directly
+            if explore_lad_args.verbose:
+                logging.basicConfig(level=logging.DEBUG)
+            
+            try:
+                from pathlib import Path
+                from .siemens_lad_parser import SiemensLADParser
+                import json
+                from datetime import datetime
+                
+                print(f"📖 Reading Siemens LAD/FBD project: {explore_lad_args.input}")
+                
+                # Load and parse the project
+                project_path = Path(explore_lad_args.input)
+                if not project_path.exists():
+                    print(f"❌ Error: Project path '{explore_lad_args.input}' not found.")
+                    sys.exit(1)
+                
+                # Parse the project
+                lad_parser = SiemensLADParser()
+                ir_project = lad_parser.parse_project(project_path)
+                
+                print(f"🔄 Parsing LAD/FBD project...")
+                print(f"  - Controller: {ir_project.controller.name}")
+                print(f"  - Programs: {len(ir_project.programs)}")
+                print(f"  - Controller tags: {len(ir_project.controller.tags)}")
+                
+                # Prepare output data
+                output_data = {
+                    'source_file': str(project_path),
+                    'exploration_time': datetime.now().isoformat(),
+                    'controller': {
+                        'name': ir_project.controller.name,
+                        'source_type': ir_project.controller.source_type,
+                        'total_tags': len(ir_project.controller.tags)
+                    },
+                    'programs': []
+                }
+                
+                # Extract program information
+                for program in ir_project.programs:
+                    program_info = {
+                        'name': program.name,
+                        'source_type': program.source_type,
+                        'routines': []
+                    }
+                    
+                    for routine in program.routines:
+                        routine_info = {
+                            'name': routine.name,
+                            'type': routine.routine_type.value,
+                            'description': routine.description,
+                            'content': routine.content
+                        }
+                        program_info['routines'].append(routine_info)
+                    
+                    output_data['programs'].append(program_info)
+                
+                # Write JSON output
+                with open(explore_lad_args.output, 'w') as f:
+                    json.dump(output_data, f, indent=2)
+                
+                print(f"✅ Successfully explored LAD/FBD project to {explore_lad_args.output}")
+                
+                # Print summary
+                total_routines = sum(len(prog.routines) for prog in ir_project.programs)
+                print(f"📊 Summary:")
+                print(f"  - Controller: {ir_project.controller.name}")
+                print(f"  - Programs: {len(ir_project.programs)}")
+                print(f"  - Routines: {total_routines}")
+                print(f"  - Tags: {len(ir_project.controller.tags)}")
+                
+                if explore_lad_args.verbose:
+                    print(f"\n📋 Detailed Summary:")
+                    for program in ir_project.programs:
+                        print(f"  - Program: {program.name}")
+                        for routine in program.routines:
+                            print(f"    - Routine: {routine.name} ({routine.routine_type.value})")
+                    
+                    if ir_project.controller.tags:
+                        print(f"\n📋 Tags:")
+                        for tag in ir_project.controller.tags[:10]:  # Show first 10
+                            print(f"  - {tag.name} ({tag.data_type})")
+                
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                if explore_lad_args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                sys.exit(1)
+            
+        except SystemExit:
+            # If argparse fails, show help
+            explore_lad_parser.print_help()
             sys.exit(1)
 
 

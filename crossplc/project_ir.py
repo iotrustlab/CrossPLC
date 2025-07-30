@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from .ir_converter import IRConverter
 from .l5k_overlay import L5KOverlay
 from .models import IRProject
+from .siemens_lad_parser import SiemensLADParser
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +104,17 @@ class ProjectIR:
                     logger.info(f"No PLCTags.xml found for {file_path.name}")
                 
                 ir_project = cls._load_siemens_scl_ir(file_path, tags_xml_path)
+                # Use the controller name from the IR project instead of filename
+                plc_name = ir_project.controller.name
                 plc_ir_map[plc_name] = ir_project
-                logger.info(f"Loaded Siemens SCL file: {file_path.name}")
+                logger.info(f"Loaded Siemens SCL file: {file_path.name} as {plc_name}")
+                
+            elif file_path.suffix.lower().startswith('.zap'):
+                # Handle Siemens LAD/FBD project files
+                ir_project = cls._load_siemens_lad_ir(file_path)
+                plc_name = ir_project.controller.name
+                plc_ir_map[plc_name] = ir_project
+                logger.info(f"Loaded Siemens LAD/FBD project: {file_path.name} as {plc_name}")
                 
             else:
                 logger.warning(f"⚠️ Unsupported file type: {file_path.suffix}")
@@ -172,6 +182,13 @@ class ProjectIR:
         from .siemens_scl_parser import SiemensSCLParser
         parser = SiemensSCLParser()
         ir_project = parser.parse(scl_path, tags_xml_path)
+        return ir_project
+    
+    @classmethod
+    def _load_siemens_lad_ir(cls, zap_path: Path) -> IRProject:
+        """Load Siemens LAD/FBD project file and convert to IR."""
+        parser = SiemensLADParser()
+        ir_project = parser.parse_project(zap_path)
         return ir_project
     
     def _build_tag_usage_maps(self):

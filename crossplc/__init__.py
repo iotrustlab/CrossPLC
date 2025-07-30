@@ -19,6 +19,7 @@ from .query import InteractiveIRQuery
 from .project_ir import ProjectIR
 from .openplc_parser import OpenPLCParser
 from .siemens_scl_parser import SiemensSCLParser
+from .siemens_lad_parser import SiemensLADParser
 
 __version__ = "2.0.0"
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "InteractiveIRQuery",
     "ProjectIR",
     "OpenPLCParser",
-    "SiemensSCLParser"
+    "SiemensSCLParser",
+    "SiemensLADParser"
 ] 
