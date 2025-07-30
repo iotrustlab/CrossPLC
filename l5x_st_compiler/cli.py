@@ -654,15 +654,16 @@ Examples:
                         print(f"❌ Error: Directory '{analyze_multi_args.directory}' not found.")
                         sys.exit(1)
                     
-                    # Find all L5X, L5K, .st, .scl, and .udt files
+                    # Find all L5X, L5K, .st, .scl, .udt, and .db files
                     l5x_files = list(dir_path.glob("*.L5X"))
                     st_files = list(dir_path.glob("*.st"))
                     scl_files = list(dir_path.glob("*.scl"))
                     udt_files = list(dir_path.glob("*.udt"))
+                    db_files = list(dir_path.glob("*.db"))
                     l5k_files = list(dir_path.glob("*.L5K"))
                     
                     # Combine all files for analysis
-                    all_files = l5x_files + st_files + scl_files + udt_files
+                    all_files = l5x_files + st_files + scl_files + udt_files + db_files
                     
                     # Match L5X and L5K files by name
                     for l5x_file in l5x_files:
@@ -675,7 +676,7 @@ Examples:
                         if matching_l5k:
                             l5k_overlays[plc_name] = matching_l5k
                     
-                    print(f"📁 Found {len(l5x_files)} L5X files, {len(st_files)} OpenPLC files, {len(scl_files)} Siemens SCL files, {len(udt_files)} Siemens UDT files, and {len(l5k_files)} L5K files in directory")
+                    print(f"📁 Found {len(l5x_files)} L5X files, {len(st_files)} OpenPLC files, {len(scl_files)} Siemens SCL files, {len(udt_files)} Siemens UDT files, {len(db_files)} Siemens DB files, and {len(l5k_files)} L5K files in directory")
                     
                 elif analyze_multi_args.l5x or analyze_multi_args.st or analyze_multi_args.scl:
                     # Load from explicit file lists (mixed L5X, .st, and .scl files)
@@ -700,7 +701,7 @@ Examples:
                         scl_files = [Path(f) for f in analyze_multi_args.scl]
                         all_files.extend(scl_files)
                     
-                    print(f"📁 Processing {len(all_files)} files ({len(l5x_files) if 'l5x_files' in locals() else 0} L5X, {len(st_files) if 'st_files' in locals() else 0} OpenPLC, {len(scl_files) if 'scl_files' in locals() else 0} Siemens SCL, {len(udt_files) if 'udt_files' in locals() else 0} Siemens UDT) with {len(l5k_overlays)} L5K overlays")
+                    print(f"📁 Processing {len(all_files)} files ({len(l5x_files) if 'l5x_files' in locals() else 0} L5X, {len(st_files) if 'st_files' in locals() else 0} OpenPLC, {len(scl_files) if 'scl_files' in locals() else 0} Siemens SCL, {len(udt_files) if 'udt_files' in locals() else 0} Siemens UDT, {len(db_files) if 'db_files' in locals() else 0} Siemens DB) with {len(l5k_overlays)} L5K overlays")
                     
 
                 

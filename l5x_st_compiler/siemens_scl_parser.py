@@ -157,10 +157,39 @@ class SiemensSCLParser:
                 variables.append(variable)
         
         # Parse DATA_BLOCK definitions
-        db_pattern = r'DATA_BLOCK\s+"([^"]+)"\s*{.*?}.*?VERSION\s*:\s*[^;]*?NON_RETAIN\s*"([^"]+)"\s*BEGIN\s*(.*?)END_DATA_BLOCK'
+        db_pattern = r'DATA_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?NON_RETAIN\s*STRUCT\s*(.*?)END_STRUCT'
         db_matches = re.finditer(db_pattern, content, re.DOTALL | re.IGNORECASE)
         
         for match in db_matches:
+            db_name = match.group(1)
+            db_struct_content = match.group(2)
+            
+            # Parse STRUCT members
+            struct_member_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
+            struct_matches = re.finditer(struct_member_pattern, db_struct_content)
+            
+            for struct_match in struct_matches:
+                member_name = struct_match.group(1)
+                member_type = struct_match.group(2).strip()
+                member_value = struct_match.group(3) if struct_match.group(3) else None
+                
+                # Handle array types
+                member_type = self._clean_data_type(member_type)
+                
+                variable = SCLVariable(
+                    name=f"{db_name}.{member_name}",
+                    data_type=member_type,
+                    scope="DATA_BLOCK",
+                    initial_value=member_value,
+                    description=f"Member of data block {db_name}"
+                )
+                variables.append(variable)
+        
+        # Fallback: Parse DATA_BLOCK without STRUCT (simple format)
+        db_simple_pattern = r'DATA_BLOCK\s+"([^"]+)"\s*{.*?}.*?VERSION\s*:\s*[^;]*?NON_RETAIN\s*"([^"]+)"\s*BEGIN\s*(.*?)END_DATA_BLOCK'
+        db_simple_matches = re.finditer(db_simple_pattern, content, re.DOTALL | re.IGNORECASE)
+        
+        for match in db_simple_matches:
             db_name = match.group(1)
             db_type = match.group(2)
             db_content = match.group(3)
