@@ -1,0 +1,42 @@
+ORGANIZATION_BLOCK "Main"
+TITLE = 'Main Program'
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : Test
+VERSION : 0.1
+   VAR_TEMP
+      tempVar : Int;
+      tempBool : Bool;
+   END_VAR
+   VAR
+      counter : Int;
+      status : Bool;
+      message : String;
+   END_VAR
+   VAR_INPUT
+      startButton : Bool;
+      stopButton : Bool;
+   END_VAR
+   VAR_OUTPUT
+      motor : Bool;
+      indicator : Bool;
+   END_VAR
+   CONST
+      MAX_COUNT := 100;
+      DEFAULT_MESSAGE := 'Hello World';
+   END_CONST
+
+BEGIN
+   // Main program logic
+   IF startButton AND NOT stopButton THEN
+      motor := TRUE;
+      counter := counter + 1;
+   END_IF;
+   
+   IF counter >= MAX_COUNT THEN
+      motor := FALSE;
+      status := TRUE;
+   END_IF;
+   
+   indicator := status;
+   message := DEFAULT_MESSAGE;
+END_ORGANIZATION_BLOCK 

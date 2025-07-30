@@ -65,6 +65,19 @@ A modern Python 3 implementation for converting between L5X files (Allen Bradley
 - **Source Type Tracking**: Identify "rockwell" vs "openplc" sources
 - **Controller Metadata**: Track source type, overlay status, validity
 
+### Siemens SCL Integration
+- **Siemens SCL Parser**: Parse Siemens SCL files (`.scl`, `.udt`, `.db`) into IR format
+- **Official Grammar Compliance**: Based on official Siemens SCL grammar specification
+- **Complete Block Support**: FUNCTION_BLOCK, FUNCTION, ORGANIZATION_BLOCK, DATA_BLOCK, TYPE
+- **Variable Declaration Sections**: VAR_INPUT, VAR_OUTPUT, VAR, VAR_TEMP, VAR_IN_OUT, CONST
+- **Data Block Support**: Parse `.db` files with STRUCT definitions and initialization
+- **User-Defined Types**: Parse `.udt` files with STRUCT members
+- **Siemens-Specific Handling**: Filter Siemens attributes (S7_HMI_*, etc.)
+- **Complex Type Support**: Handle array types, STRUCT definitions, AT references
+- **Mixed-Platform Analysis**: Analyze Rockwell + OpenPLC + Siemens systems together
+- **Source Type Tracking**: Identify "rockwell", "openplc", "siemens" sources
+- **Project Structure Analysis**: Complete Siemens SCL project analysis
+
 ### Advanced Features
 - **Complete Round-Trip Conversion**: L5X ↔ ST ↔ L5X with validation
 - **Intermediate Representation (IR)**: Internal data model for validation
@@ -212,6 +225,32 @@ python -m l5x_st_compiler.cli analyze-multi -d ./mixed_project -o analysis.json
 python -m l5x_st_compiler.cli analyze-multi \
   --st controller.st \
   -o detailed.json \
+  --include tags,control_flow,controllers
+```
+
+#### Siemens SCL Integration
+```bash
+# Analyze Siemens SCL files
+python -m l5x_st_compiler.cli analyze-multi --scl main.scl -o siemens.json
+
+# Analyze Siemens UDT files
+python -m l5x_st_compiler.cli analyze-multi --scl types.udt -o udt.json
+
+# Analyze Siemens DB files
+python -m l5x_st_compiler.cli analyze-multi --scl data.db -o db.json
+
+# Complete Siemens project analysis
+python -m l5x_st_compiler.cli analyze-multi -d /path/to/siemens/project -o siemens_project.json
+
+# Mixed three-platform analysis
+python -m l5x_st_compiler.cli analyze-multi \
+  --l5x rockwell.L5X --st openplc.st --scl siemens.scl \
+  -o three_platform.json
+
+# Siemens with detailed component export
+python -m l5x_st_compiler.cli analyze-multi \
+  --scl main.scl --scl data.db \
+  -o detailed_siemens.json \
   --include tags,control_flow,controllers
 ```
 
@@ -442,6 +481,62 @@ detailed = summary.get("detailed_components", {})
 for plc_name, components in detailed.items():
     print(f"{plc_name}: {list(components.keys())} components available")
 ```
+
+#### Siemens SCL Integration
+```python
+from l5x_st_compiler.siemens_scl_parser import SiemensSCLParser
+from l5x_st_compiler.project_ir import ProjectIR
+from pathlib import Path
+
+# Parse Siemens SCL file
+parser = SiemensSCLParser()
+ir_project = parser.parse(Path("main.scl"))
+
+# Access Siemens-specific information
+print(f"Controller: {ir_project.controller.name}")
+print(f"Source type: {ir_project.source_type}")
+print(f"Tags: {len(ir_project.controller.tags)}")
+
+# Parse Siemens UDT file
+udt_project = parser.parse(Path("types.udt"))
+print(f"UDT variables: {len(udt_project.controller.tags)}")
+
+# Parse Siemens DB file
+db_project = parser.parse(Path("data.db"))
+print(f"DB variables: {len(db_project.controller.tags)}")
+
+# Complete Siemens project analysis
+project_ir = ProjectIR.from_files([
+    Path("main.scl"),      # Main program
+    Path("functions.scl"), # Function blocks
+    Path("data.db"),       # Data block
+    Path("types.udt")      # User-defined types
+])
+
+# Mixed three-platform analysis
+project_ir = ProjectIR.from_files([
+    Path("P1.L5X"),        # Rockwell
+    Path("controller.st"),  # OpenPLC
+    Path("main.scl"),      # Siemens
+    Path("data.db")        # Siemens DB
+])
+
+# Export mixed analysis with detailed components
+summary = project_ir.export_summary(
+    Path("three_platform_analysis.json"),
+    include_components=["tags", "control_flow", "controllers", "shared_tags"]
+)
+
+# Access controller metadata by platform
+for controller in summary.get("controllers", []):
+    print(f"{controller['name']}: {controller['source']} platform")
+
+# Access Siemens-specific components
+detailed = summary.get("detailed_components", {})
+for plc_name, components in detailed.items():
+    if "siemens" in plc_name.lower():
+        print(f"Siemens {plc_name}: {list(components.keys())} components")
+```
 ```
 
 ## Project Structure
@@ -462,6 +557,7 @@ l5x2ST/
 │   ├── query.py              # Interactive IR querying API
 │   ├── project_ir.py         # Multi-PLC analysis system
 │   ├── openplc_parser.py     # OpenPLC ST parser
+│   ├── siemens_scl_parser.py # Siemens SCL parser
 │   ├── l5x2st.py            # L5X to ST converter
 │   ├── st2l5x.py            # ST to L5X converter
 │   └── cli.py               # Command-line interface
@@ -476,7 +572,8 @@ l5x2ST/
 │   ├── l5k_overlay_example.py # L5K overlay usage examples
 │   ├── validate_l5k_overlay_diff.py # Overlay difference analysis
 │   ├── validation_test.py   # Comprehensive validation
-│   └── test_openplc.st      # OpenPLC test file
+│   ├── test_openplc.st      # OpenPLC test file
+│   └── test_siemens.scl     # Siemens SCL test file
 ├── tests/                    # Test suite
 │   ├── __init__.py
 │   ├── test_l5x2st.py       # Tests for L5X2ST converter
@@ -685,6 +782,9 @@ python examples/graph_export_example.py
 - [ ] Support for more advanced motion instructions
 - [ ] Performance optimizations for large projects
 - [ ] Better error reporting and diagnostics
+- [ ] Enhanced Siemens SCL grammar compliance
+- [ ] Support for more Siemens-specific data types
+- [ ] Siemens PLCTags.xml integration improvements
 
 ## Contributing
 
