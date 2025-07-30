@@ -94,8 +94,8 @@ class ProjectIR:
                 plc_ir_map[plc_name] = ir_project
                 logger.info(f"Loaded OpenPLC file: {file_path.name}")
                 
-            elif file_path.suffix.lower() == '.scl':
-                # Handle Siemens SCL files
+            elif file_path.suffix.lower() in ['.scl', '.udt']:
+                # Handle Siemens SCL files (including UDT files)
                 # Look for matching PLCTags.xml file
                 tags_xml_path = file_path.parent / "PLCTags.xml"
                 if not tags_xml_path.exists():
