@@ -17,9 +17,9 @@ from pathlib import Path
 # Add the parent directory to the path to import the package
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from l5x_st_compiler.l5k_overlay import L5KOverlay
-from l5x_st_compiler.ir_converter import IRConverter
-from l5x_st_compiler.models import IRProject, IRController, IRTag, TagScope
+from crossplc.l5k_overlay import L5KOverlay
+from crossplc.ir_converter import IRConverter
+from crossplc.models import IRProject, IRController, IRTag, TagScope
 
 
 def create_sample_ir_project():

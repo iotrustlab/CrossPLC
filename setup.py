@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Setup script for L5X-ST compiler."""
+"""Setup script for CrossPLC compiler."""
 
 from setuptools import setup, find_packages
 
@@ -10,10 +10,10 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="l5x-st-compiler",
+    name="crossplc",
     version="2.0.0",
     author="Original Author + Modernization",
-    description="Modern L5X to Structured Text compiler with ST to L5X capabilities",
+    description="Cross-vendor semantic toolkit for PLC codebases with multi-platform support",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),
@@ -34,10 +34,11 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "l5x2st=l5x_st_compiler.cli:l5x2st_main",
-            "st2l5x=l5x_st_compiler.cli:st2l5x_main",
-            "l5k-overlay-validate=examples.validate_l5k_overlay_diff:main",
-            "l5x-st-compiler=l5x_st_compiler.cli:main",
+            "crossplc=crossplc.cli:main",
+            "l5x2st=crossplc.cli:l5x2st_main",
+            "st2l5x=crossplc.cli:st2l5x_main",
+            "export-ir=crossplc.cli:export_ir_main",
+            "analyze-multi=crossplc.cli:analyze_multi_main",
         ],
     },
     include_package_data=True,

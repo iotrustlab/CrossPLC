@@ -1,0 +1,160 @@
+digraph CFG {
+  rankdir=TB;
+  node [shape=box, style=filled, fillcolor=lightblue];
+  edge [color=black];
+
+  subgraph cluster_IO {
+    label="IO";
+    style=filled;
+    color=lightgrey;
+
+    "IO_entry" [label="entry\n(*DIGITAL INPUTS*)\nDI_WIFI_PLC_1		:=RIO1:0:I.Data.0;\nDI_WIFI_RIO_1		:=RIO1:0:I.Data.1;\n...\nDefs: .RIO_WIFI, .PLC_WIFI\nUses: ", fillcolor="lightblue"];
+  }
+
+  subgraph cluster_Main_Seq {
+    label="Main_Seq";
+    style=filled;
+    color=lightgrey;
+
+    "Main_Seq_entry" [label="entry\n(*MINUTES PULSE*)\nTON_MIN.PRE	:=60000;\nTON_MIN.TimerEnable	:=1;\n...\nDefs: .PRE\nUses: .DN", fillcolor="lightblue"];
+    "Main_Seq_b1" [label="b1\nIF: _MIN_P", fillcolor="lightgreen"];
+    "Main_Seq_b1" [label="b1\nIF: _MIN_P", fillcolor="lightgreen"];
+    "Main_Seq_b2" [label="b2\nIF: S:FS then", fillcolor="lightgreen"];
+    "Main_Seq_b2" [label="b2\nIF: S:FS then", fillcolor="lightgreen"];
+    "Main_Seq_b3" [label="b3\nIF: HMI_P1_STATE =1", fillcolor="lightgreen"];
+    "Main_Seq_b4" [label="b4\nIF: _MIN_P", fillcolor="lightgreen"];
+    "Main_Seq_b4" [label="b4\nIF: _MIN_P", fillcolor="lightgreen"];
+    "Main_Seq_b5" [label="b5\nIF: HMI_SHUTDOWN_TIMER>100\nDefs: .START\nUses: ", fillcolor="lightgreen"];
+    "Main_Seq_b5" [label="b5\nIF: HMI_SHUTDOWN_TIMER>100\nDefs: .START\nUses: ", fillcolor="lightgreen"];
+    "Main_Seq_b6" [label="b6\nIF: HMI_PLANT.START\nDefs: .START, .ON\nUses: .START", fillcolor="lightgreen"];
+    "Main_Seq_b6" [label="b6\nIF: HMI_PLANT.START\nDefs: .START, .ON\nUses: .START", fillcolor="lightgreen"];
+    "Main_Seq_b7" [label="b7\nIF: HMI_PLANT.STOP\nDefs: \nUses: .STOP", fillcolor="lightgreen"];
+    "Main_Seq_b7" [label="b7\nIF: HMI_PLANT.STOP\nDefs: \nUses: .STOP", fillcolor="lightgreen"];
+    "Main_Seq_b8" [label="b8\nIF: HMI_PLANT.STOP\nDefs: \nUses: .STOP", fillcolor="lightgreen"];
+    "Main_Seq_b8" [label="b8\nIF: HMI_PLANT.STOP\nDefs: \nUses: .STOP", fillcolor="lightgreen"];
+    "Main_Seq_b9" [label="b9\nCASE HMI_P1_STATE OF", fillcolor="lightyellow"];
+    "Main_Seq_b9" [label="b9\nCASE HMI_P1_STATE OF", fillcolor="lightyellow"];
+    "Main_Seq_b10" [label="b10\nIF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON\nDefs: \nUses: .AL, .START, .ON...", fillcolor="lightgreen"];
+    "Main_Seq_b10" [label="b10\nIF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON\nDefs: \nUses: .AL, .START, .ON...", fillcolor="lightgreen"];
+    "Main_Seq_b11" [label="b11\nIF: HMI_P1_SHUTDOWN", fillcolor="lightgreen"];
+    "Main_Seq_b12" [label="b12\nIF: HMI_LIT301.AH\nDefs: \nUses: .AH", fillcolor="lightgreen"];
+    "Main_Seq_b12" [label="b12\nIF: HMI_LIT301.AH\nDefs: \nUses: .AH", fillcolor="lightgreen"];
+    "Main_Seq_b13" [label="b13\nIF: HMI_SHUTDOWN_FLUSHING.ON AND HMI_P5_SD_FLUSHING_DONE.ON\nDefs: .STOP\nUses: .ON", fillcolor="lightgreen"];
+    "Main_Seq_b13" [label="b13\nIF: HMI_SHUTDOWN_FLUSHING.ON AND HMI_P5_SD_FLUSHING_DONE.ON\nDefs: .STOP\nUses: .ON", fillcolor="lightgreen"];
+    "Main_Seq_b14" [label="b14\nIF: HMI_PLANT.STOP\nDefs: .STOP, .ON\nUses: .STOP", fillcolor="lightgreen"];
+    "Main_Seq_b14" [label="b14\nIF: HMI_PLANT.STOP\nDefs: .STOP, .ON\nUses: .STOP", fillcolor="lightgreen"];
+    "Main_Seq_entry" -> "Main_Seq_b1";
+    "Main_Seq_b1" -> "Main_Seq_b2";
+    "Main_Seq_b1" -> "Main_Seq_b2" [label="true"];
+    "Main_Seq_b1" -> "Main_Seq_b3" [label="false"];
+    "Main_Seq_b1" -> "Main_Seq_b2";
+    "Main_Seq_b1" -> "Main_Seq_b2" [label="true"];
+    "Main_Seq_b1" -> "Main_Seq_b3" [label="false"];
+    "Main_Seq_b2" -> "Main_Seq_b3";
+    "Main_Seq_b2" -> "Main_Seq_b3" [label="true"];
+    "Main_Seq_b2" -> "Main_Seq_b4" [label="false"];
+    "Main_Seq_b2" -> "Main_Seq_b3";
+    "Main_Seq_b2" -> "Main_Seq_b3" [label="true"];
+    "Main_Seq_b2" -> "Main_Seq_b4" [label="false"];
+    "Main_Seq_b3" -> "Main_Seq_b4";
+    "Main_Seq_b3" -> "Main_Seq_b4" [label="true"];
+    "Main_Seq_b3" -> "Main_Seq_b5" [label="false"];
+    "Main_Seq_b4" -> "Main_Seq_b5";
+    "Main_Seq_b4" -> "Main_Seq_b5" [label="true"];
+    "Main_Seq_b4" -> "Main_Seq_b6" [label="false"];
+    "Main_Seq_b4" -> "Main_Seq_b5";
+    "Main_Seq_b4" -> "Main_Seq_b5" [label="true"];
+    "Main_Seq_b4" -> "Main_Seq_b6" [label="false"];
+    "Main_Seq_b5" -> "Main_Seq_b6";
+    "Main_Seq_b5" -> "Main_Seq_b6" [label="true"];
+    "Main_Seq_b5" -> "Main_Seq_b7" [label="false"];
+    "Main_Seq_b5" -> "Main_Seq_b6";
+    "Main_Seq_b5" -> "Main_Seq_b6" [label="true"];
+    "Main_Seq_b5" -> "Main_Seq_b7" [label="false"];
+    "Main_Seq_b6" -> "Main_Seq_b7";
+    "Main_Seq_b6" -> "Main_Seq_b7" [label="true"];
+    "Main_Seq_b6" -> "Main_Seq_b8" [label="false"];
+    "Main_Seq_b6" -> "Main_Seq_b7";
+    "Main_Seq_b6" -> "Main_Seq_b7" [label="true"];
+    "Main_Seq_b6" -> "Main_Seq_b8" [label="false"];
+    "Main_Seq_b7" -> "Main_Seq_b8";
+    "Main_Seq_b7" -> "Main_Seq_b8" [label="true"];
+    "Main_Seq_b7" -> "Main_Seq_b9" [label="false"];
+    "Main_Seq_b7" -> "Main_Seq_b8";
+    "Main_Seq_b7" -> "Main_Seq_b8" [label="true"];
+    "Main_Seq_b7" -> "Main_Seq_b9" [label="false"];
+    "Main_Seq_b8" -> "Main_Seq_b9";
+    "Main_Seq_b8" -> "Main_Seq_b9" [label="true"];
+    "Main_Seq_b8" -> "Main_Seq_b10" [label="false"];
+    "Main_Seq_b8" -> "Main_Seq_b9";
+    "Main_Seq_b8" -> "Main_Seq_b9" [label="true"];
+    "Main_Seq_b8" -> "Main_Seq_b10" [label="false"];
+    "Main_Seq_b9" -> "Main_Seq_b10";
+    "Main_Seq_b9" -> "Main_Seq_b10";
+    "Main_Seq_b10" -> "Main_Seq_b11";
+    "Main_Seq_b10" -> "Main_Seq_b11" [label="true"];
+    "Main_Seq_b10" -> "Main_Seq_b12" [label="false"];
+    "Main_Seq_b10" -> "Main_Seq_b11";
+    "Main_Seq_b10" -> "Main_Seq_b11" [label="true"];
+    "Main_Seq_b10" -> "Main_Seq_b12" [label="false"];
+    "Main_Seq_b11" -> "Main_Seq_b12";
+    "Main_Seq_b11" -> "Main_Seq_b12" [label="true"];
+    "Main_Seq_b11" -> "Main_Seq_b13" [label="false"];
+    "Main_Seq_b12" -> "Main_Seq_b13";
+    "Main_Seq_b12" -> "Main_Seq_b13" [label="true"];
+    "Main_Seq_b12" -> "Main_Seq_b14" [label="false"];
+    "Main_Seq_b12" -> "Main_Seq_b13";
+    "Main_Seq_b12" -> "Main_Seq_b13" [label="true"];
+    "Main_Seq_b12" -> "Main_Seq_b14" [label="false"];
+    "Main_Seq_b13" -> "Main_Seq_b14";
+    "Main_Seq_b13" -> "Main_Seq_b14" [label="true"];
+    "Main_Seq_b13" -> "Main_Seq_b15" [label="false"];
+    "Main_Seq_b13" -> "Main_Seq_b14";
+    "Main_Seq_b13" -> "Main_Seq_b14" [label="true"];
+    "Main_Seq_b13" -> "Main_Seq_b15" [label="false"];
+    "Main_Seq_b14" -> "Main_Seq_b15" [label="true"];
+    "Main_Seq_b14" -> "Main_Seq_b16" [label="false"];
+    "Main_Seq_b14" -> "Main_Seq_b15" [label="true"];
+    "Main_Seq_b14" -> "Main_Seq_b16" [label="false"];
+  }
+
+  subgraph cluster_Pre_Condition {
+    label="Pre_Condition";
+    style=filled;
+    color=lightgrey;
+
+    "Pre_Condition_entry" [label="entry\n(*RESET ALL INSTRUMENT*)", fillcolor="lightblue"];
+    "Pre_Condition_b15" [label="b15\nIF: HMI_PLANT_RESET.ON\nDefs: \nUses: .ON", fillcolor="lightgreen"];
+    "Pre_Condition_b15" [label="b15\nIF: HMI_PLANT_RESET.ON\nDefs: \nUses: .ON", fillcolor="lightgreen"];
+    "Pre_Condition_b16" [label="b16\nIF: HMI_PLANT_AUTO.ON\nDefs: \nUses: .ON", fillcolor="lightgreen"];
+    "Pre_Condition_b16" [label="b16\nIF: HMI_PLANT_AUTO.ON\nDefs: \nUses: .ON", fillcolor="lightgreen"];
+    "Pre_Condition_b17" [label="b17\nIF: HMI_PLANT_AUTO.OFF\nDefs: .SHUTODWN2, .SHUTODWN5, .SD...\nUses: .HTY, .ALL, .DN...", fillcolor="lightgreen"];
+    "Pre_Condition_b17" [label="b17\nIF: HMI_PLANT_AUTO.OFF\nDefs: .SHUTODWN2, .SHUTODWN5, .SD...\nUses: .HTY, .ALL, .DN...", fillcolor="lightgreen"];
+    "Pre_Condition_entry" -> "Pre_Condition_b15";
+    "Pre_Condition_b15" -> "Pre_Condition_b16";
+    "Pre_Condition_b15" -> "Pre_Condition_b16" [label="true"];
+    "Pre_Condition_b15" -> "Pre_Condition_b17" [label="false"];
+    "Pre_Condition_b15" -> "Pre_Condition_b16";
+    "Pre_Condition_b15" -> "Pre_Condition_b16" [label="true"];
+    "Pre_Condition_b15" -> "Pre_Condition_b17" [label="false"];
+    "Pre_Condition_b16" -> "Pre_Condition_b17";
+    "Pre_Condition_b16" -> "Pre_Condition_b17" [label="true"];
+    "Pre_Condition_b16" -> "Pre_Condition_b18" [label="false"];
+    "Pre_Condition_b16" -> "Pre_Condition_b17";
+    "Pre_Condition_b16" -> "Pre_Condition_b17" [label="true"];
+    "Pre_Condition_b16" -> "Pre_Condition_b18" [label="false"];
+    "Pre_Condition_b17" -> "Pre_Condition_b18" [label="true"];
+    "Pre_Condition_b17" -> "Pre_Condition_b19" [label="false"];
+    "Pre_Condition_b17" -> "Pre_Condition_b18" [label="true"];
+    "Pre_Condition_b17" -> "Pre_Condition_b19" [label="false"];
+  }
+
+  subgraph cluster_Raw_Water {
+    label="Raw_Water";
+    style=filled;
+    color=lightgrey;
+
+    "Raw_Water_entry" [label="entry\n<FBDContent SheetSize="A0 - 841 x 1189 mm" SheetOrientation="Landscape">\n<Sheet Number="1">\n<IRef ID="0" X="1980" Y="580" Operand="-15" HideDesc="false" />\n...", fillcolor="lightblue"];
+  }
+
+}

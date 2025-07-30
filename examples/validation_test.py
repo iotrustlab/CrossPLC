@@ -18,10 +18,10 @@ from pathlib import Path
 # Add the parent directory to the path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from l5x_st_compiler.l5x2st import L5X2STConverter
-from l5x_st_compiler.st2l5x import ST2L5XConverter, convert_st_to_l5x_string
-from l5x_st_compiler.ir_converter import IRConverter
-from l5x_st_compiler.models import RoundTripInfo
+from crossplc.l5x2st import L5X2STConverter
+from crossplc.st2l5x import ST2L5XConverter, convert_st_to_l5x_string
+from crossplc.ir_converter import IRConverter
+from crossplc.models import RoundTripInfo
 
 def test_l5x_to_st_conversion():
     """Test L5X to ST conversion."""

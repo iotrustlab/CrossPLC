@@ -1,4 +1,4 @@
-"""Command-line interface for the L5X-ST compiler."""
+"""Command-line interface for the CrossPLC compiler."""
 
 import argparse
 import sys
@@ -309,39 +309,39 @@ def extract_io(input_file: str, output_file: str, verbose: bool):
 def main():
     """Main entry point for the combined tool."""
     parser = argparse.ArgumentParser(
-        description='L5X-ST Compiler - Convert between L5X and Structured Text formats.',
+        description='CrossPLC - Cross-vendor translation and semantic analysis framework for PLC logic.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Convert L5X to ST (default - tag preservation mode)
-  l5x-st-compiler l5x2st -i project.L5X -o output.st
+  crossplc l5x2st -i project.L5X -o output.st
   
   # Convert L5X to ST (legacy mode - basic tag generation)
-  l5x-st-compiler l5x2st -i project.L5X -o output.st --legacy
+  crossplc l5x2st -i project.L5X -o output.st --legacy
   
   # Convert L5X to ST (tag preservation with L5K overlay)
-  l5x-st-compiler l5x2st -i project.L5X -o output.st --l5k-overlay overlay.L5K
+  crossplc l5x2st -i project.L5X -o output.st --l5k-overlay overlay.L5K
   
   # Convert L5X to ST (IR/guardrail mode)
-  l5x-st-compiler l5x2st -i project.L5X -o output.st --use-ir
+  crossplc l5x2st -i project.L5X -o output.st --use-ir
   
   # Convert ST to L5X (default - tag preservation mode)
-  l5x-st-compiler st2l5x -i program.st -o output.L5X
+  crossplc st2l5x -i program.st -o output.L5X
   
   # Convert ST to L5X (legacy mode - basic tag generation)
-  l5x-st-compiler st2l5x -i program.st -o output.L5X --legacy
+  crossplc st2l5x -i program.st -o output.L5X --legacy
   
   # Convert ST to L5X (IR/guardrail mode)
-  l5x-st-compiler st2l5x -i program.st -o output.L5X --use-ir
+  crossplc st2l5x -i program.st -o output.L5X --use-ir
   
   # Extract I/O tags from L5X file
-  l5x-st-compiler extract-io -i Control.L5X -o io_mapping.json
+  crossplc extract-io -i Control.L5X -o io_mapping.json
   
   # Export IR components to JSON
-  l5x-st-compiler export-ir -i P1.L5X -o out/ir_dump.json --include tags,control_flow
+  crossplc export-ir -i P1.L5X -o out/ir_dump.json --include tags,control_flow
   
   # Convert directory of L5X files
-  l5x-st-compiler l5x2st -d l5x_files -o consolidated.st
+  crossplc l5x2st -d l5x_files -o consolidated.st
         """
     )
     
@@ -385,7 +385,7 @@ Examples:
                 logging.basicConfig(level=logging.DEBUG)
             
             try:
-                from l5x_st_compiler.l5x2st import L5X2STConverter
+                from crossplc.l5x2st import L5X2STConverter
                 l5x2st_converter = L5X2STConverter()
                 if st2l5x_args.use_ir:
                     print("[INFO] IR/guardrail mode enabled: ST→IR→L5X with validation.")

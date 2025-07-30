@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+
+  <key id="label" for="node" attr.name="label" attr.type="string"/>
+  <key id="tag" for="edge" attr.name="tag" attr.type="string"/>
+  <key id="flow_type" for="edge" attr.name="flow_type" attr.type="string"/>
+
+  <graph id="dataflow" edgedefault="directed">
+
+    <node id="n0">
+      <data key="label">IO</data>
+    </node>
+    <node id="n1">
+      <data key="label">Main_Seq</data>
+    </node>
+    <node id="n2">
+      <data key="label">Raw_Water</data>
+    </node>
+    <node id="n3">
+      <data key="label">Pre_Condition</data>
+    </node>
+
+    <edge id="e0" source="n1" target="n3">
+      <data key="tag">.ON</data>
+      <data key="flow_type">write_to_read</data>
+    </edge>
+  </graph>
+</graphml>

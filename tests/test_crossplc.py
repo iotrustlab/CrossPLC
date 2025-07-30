@@ -1,11 +1,11 @@
-"""Tests for the L5X to ST converter."""
+"""Tests for the CrossPLC converter."""
 
 import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from l5x_st_compiler.l5x2st import L5X2STConverter
-from l5x_st_compiler.models import STFile, CompilerState
+from crossplc.l5x2st import L5X2STConverter
+from crossplc.models import STFile, CompilerState
 
 
 class TestL5X2STConverter:
@@ -86,7 +86,7 @@ class TestL5X2STConverter:
         assert "END_PROGRAM" in result
         assert "CONFIGURATION Config0" in result
     
-    @patch('l5x_st_compiler.l5x2st.l5x.Project')
+    @patch('crossplc.l5x2st.l5x.Project')
     def test_parse_l5x_file_mock(self, mock_l5x_project):
         """Test parsing L5X file with mocked l5x library."""
         converter = L5X2STConverter()

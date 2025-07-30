@@ -13,8 +13,8 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from l5x_st_compiler.ir_converter import IRConverter
-from l5x_st_compiler.export_ir import export_cfg_to_graphs, CFGAnalyzer, GraphExporter
+from crossplc.ir_converter import IRConverter
+from crossplc.export_ir import export_cfg_to_graphs, CFGAnalyzer, GraphExporter
 import l5x
 
 def main():

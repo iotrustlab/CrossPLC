@@ -8,8 +8,8 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from l5x_st_compiler.st2l5x import ST2L5XConverter
-from l5x_st_compiler.l5x2st import L5X2STConverter
+from crossplc.st2l5x import ST2L5XConverter
+from crossplc.l5x2st import L5X2STConverter
 import xml.etree.ElementTree as ET
 
 def create_complex_st_example():

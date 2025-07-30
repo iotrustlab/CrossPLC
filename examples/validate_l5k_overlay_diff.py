@@ -25,8 +25,8 @@ from typing import Dict, Any, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import l5x
-from l5x_st_compiler.ir_converter import IRConverter
-from l5x_st_compiler.models import IRProject
+from crossplc.ir_converter import IRConverter
+from crossplc.models import IRProject
 
 
 def summarize_ir(ir_project: IRProject) -> Dict[str, Any]:

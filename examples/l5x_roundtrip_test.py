@@ -10,8 +10,8 @@ from pathlib import Path
 # Add the parent directory to the path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from l5x_st_compiler.l5x2st import L5X2STConverter
-from l5x_st_compiler.st2l5x import convert_st_to_l5x_string
+from crossplc.l5x2st import L5X2STConverter
+from crossplc.st2l5x import convert_st_to_l5x_string
 
 # Use a generic test file path - user should provide their own L5X file
 L5X_FILE = "test_project.L5X"  # User should replace with actual file

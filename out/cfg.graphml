@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+
+  <key id="label" for="node" attr.name="label" attr.type="string"/>
+  <key id="type" for="node" attr.name="type" attr.type="string"/>
+  <key id="routine" for="node" attr.name="routine" attr.type="string"/>
+  <key id="defs" for="node" attr.name="defs" attr.type="string"/>
+  <key id="uses" for="node" attr.name="uses" attr.type="string"/>
+  <key id="tag" for="edge" attr.name="tag" attr.type="string"/>
+  <key id="flow_type" for="edge" attr.name="flow_type" attr.type="string"/>
+
+  <graph id="cfg" edgedefault="directed">
+
+    <node id="n0">
+      <data key="label">entry - 81 instructions</data>
+      <data key="type">instruction</data>
+      <data key="routine">IO</data>
+      <data key="defs">.RIO_WIFI,.PLC_WIFI</data>
+      <data key="uses"></data>
+    </node>
+    <node id="n1">
+      <data key="label">entry - 8 instructions</data>
+      <data key="type">instruction</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.PRE</data>
+      <data key="uses">.DN</data>
+    </node>
+    <node id="n2">
+      <data key="label">b1 - IF: _MIN_P</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n3">
+      <data key="label">b1 - IF: _MIN_P</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n4">
+      <data key="label">b2 - IF: S:FS then</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n5">
+      <data key="label">b2 - IF: S:FS then</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n6">
+      <data key="label">b3 - IF: HMI_P1_STATE =1</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n7">
+      <data key="label">b4 - IF: _MIN_P</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n8">
+      <data key="label">b4 - IF: _MIN_P</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n9">
+      <data key="label">b5 - IF: HMI_SHUTDOWN_TIMER>100</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.START</data>
+      <data key="uses"></data>
+    </node>
+    <node id="n10">
+      <data key="label">b5 - IF: HMI_SHUTDOWN_TIMER>100</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.START</data>
+      <data key="uses"></data>
+    </node>
+    <node id="n11">
+      <data key="label">b6 - IF: HMI_PLANT.START</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.START,.ON</data>
+      <data key="uses">.START</data>
+    </node>
+    <node id="n12">
+      <data key="label">b6 - IF: HMI_PLANT.START</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.START,.ON</data>
+      <data key="uses">.START</data>
+    </node>
+    <node id="n13">
+      <data key="label">b7 - IF: HMI_PLANT.STOP</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.STOP</data>
+    </node>
+    <node id="n14">
+      <data key="label">b7 - IF: HMI_PLANT.STOP</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.STOP</data>
+    </node>
+    <node id="n15">
+      <data key="label">b8 - IF: HMI_PLANT.STOP</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.STOP</data>
+    </node>
+    <node id="n16">
+      <data key="label">b8 - IF: HMI_PLANT.STOP</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.STOP</data>
+    </node>
+    <node id="n17">
+      <data key="label">b9 - CASE HMI_P1_STATE OF</data>
+      <data key="type">control</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n18">
+      <data key="label">b9 - CASE HMI_P1_STATE OF</data>
+      <data key="type">control</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n19">
+      <data key="label">b10 - IF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.AL,.START,.ON,.AH</data>
+    </node>
+    <node id="n20">
+      <data key="label">b10 - IF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.AL,.START,.ON,.AH</data>
+    </node>
+    <node id="n21">
+      <data key="label">b11 - IF: HMI_P1_SHUTDOWN</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n22">
+      <data key="label">b12 - IF: HMI_LIT301.AH</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.AH</data>
+    </node>
+    <node id="n23">
+      <data key="label">b12 - IF: HMI_LIT301.AH</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs"></data>
+      <data key="uses">.AH</data>
+    </node>
+    <node id="n24">
+      <data key="label">b13 - IF: HMI_SHUTDOWN_FLUSHING.ON AND HMI_P5_SD_FLUSHING_DONE.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.STOP</data>
+      <data key="uses">.ON</data>
+    </node>
+    <node id="n25">
+      <data key="label">b13 - IF: HMI_SHUTDOWN_FLUSHING.ON AND HMI_P5_SD_FLUSHING_DONE.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.STOP</data>
+      <data key="uses">.ON</data>
+    </node>
+    <node id="n26">
+      <data key="label">b14 - IF: HMI_PLANT.STOP</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.STOP,.ON</data>
+      <data key="uses">.STOP</data>
+    </node>
+    <node id="n27">
+      <data key="label">b14 - IF: HMI_PLANT.STOP</data>
+      <data key="type">branch</data>
+      <data key="routine">Main_Seq</data>
+      <data key="defs">.STOP,.ON</data>
+      <data key="uses">.STOP</data>
+    </node>
+    <node id="n28">
+      <data key="label">entry - 1 instructions</data>
+      <data key="type">instruction</data>
+      <data key="routine">Pre_Condition</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+    <node id="n29">
+      <data key="label">b15 - IF: HMI_PLANT_RESET.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Pre_Condition</data>
+      <data key="defs"></data>
+      <data key="uses">.ON</data>
+    </node>
+    <node id="n30">
+      <data key="label">b15 - IF: HMI_PLANT_RESET.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Pre_Condition</data>
+      <data key="defs"></data>
+      <data key="uses">.ON</data>
+    </node>
+    <node id="n31">
+      <data key="label">b16 - IF: HMI_PLANT_AUTO.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Pre_Condition</data>
+      <data key="defs"></data>
+      <data key="uses">.ON</data>
+    </node>
+    <node id="n32">
+      <data key="label">b16 - IF: HMI_PLANT_AUTO.ON</data>
+      <data key="type">branch</data>
+      <data key="routine">Pre_Condition</data>
+      <data key="defs"></data>
+      <data key="uses">.ON</data>
+    </node>
+    <node id="n33">
+      <data key="label">b17 - IF: HMI_PLANT_AUTO.OFF</data>
+      <data key="type">branch</data>
+      <data key="routine">Pre_Condition</data>
+      <data key="defs">.SHUTODWN2,.SHUTODWN5,.SD,.PERMISSIVE1,.SHUTODWN1,.PERMISSIVE3,.SHUTODWN3,.PERMISSIVE5,.PERMISSIVE4,.PRE,.ON,.SHUTODWN4,.PERMISSIVE2</data>
+      <data key="uses">.HTY,.ALL,.DN,.ON,.STATUS,.OFF</data>
+    </node>
+    <node id="n34">
+      <data key="label">b17 - IF: HMI_PLANT_AUTO.OFF</data>
+      <data key="type">branch</data>
+      <data key="routine">Pre_Condition</data>
+      <data key="defs">.SHUTODWN2,.SHUTODWN5,.SD,.PERMISSIVE1,.SHUTODWN1,.PERMISSIVE3,.SHUTODWN3,.PERMISSIVE5,.PERMISSIVE4,.PRE,.ON,.SHUTODWN4,.PERMISSIVE2</data>
+      <data key="uses">.HTY,.ALL,.DN,.ON,.STATUS,.OFF</data>
+    </node>
+    <node id="n35">
+      <data key="label">entry - 231 instructions</data>
+      <data key="type">instruction</data>
+      <data key="routine">Raw_Water</data>
+      <data key="defs"></data>
+      <data key="uses"></data>
+    </node>
+
+    <edge id="e0" source="n0" target="n1">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e1" source="n1" target="n2">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e2" source="n2" target="n3">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e3" source="n3" target="n4">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e4" source="n4" target="n5">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e5" source="n5" target="n6">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e6" source="n6" target="n7">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e7" source="n7" target="n8">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e8" source="n8" target="n9">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e9" source="n9" target="n10">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e10" source="n10" target="n11">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e11" source="n11" target="n12">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e12" source="n12" target="n13">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e13" source="n13" target="n14">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e14" source="n14" target="n15">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e15" source="n15" target="n16">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e16" source="n16" target="n17">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e17" source="n17" target="n18">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e18" source="n18" target="n19">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e19" source="n19" target="n20">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e20" source="n20" target="n21">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e21" source="n21" target="n22">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e22" source="n22" target="n23">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e23" source="n23" target="n24">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e24" source="n24" target="n25">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e25" source="n25" target="n26">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e26" source="n26" target="n27">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e27" source="n27" target="n28">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e28" source="n28" target="n29">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+    <edge id="e29" source="n29" target="n30">
+      <data key="tag">control_flow</data>
+      <data key="flow_type">successor</data>
+    </edge>
+  </graph>
+</graphml>

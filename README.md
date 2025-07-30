@@ -1,8 +1,15 @@
-# L5X-ST Compiler
+# CrossPLC: A Cross-Vendor Translation and Semantic Analysis Framework for PLC Logic
 
-A modern Python 3 implementation for converting between L5X files (Allen Bradley/Rockwell Automation) and Structured Text (ST) format. This project builds upon the original L5X parser and provides a clean, modular, and testable codebase with **complete round-trip conversion**, **IR validation**, **L5K overlay support**, **semantic analysis**, **control flow graph analysis**, and **multi-PLC analysis**.
+A modern Python 3 implementation for translating, analyzing, and unifying control logic across Rockwell, Siemens, and OpenPLC ecosystems. This project provides **complete round-trip conversion**, **IR validation**, **L5K overlay support**, **semantic analysis**, **control flow graph analysis**, and **multi-PLC analysis** across multiple vendor platforms.
 
 ## Features
+
+### Cross-Vendor Support
+- **Rockwell Automation**: Convert `.L5X` and `.L5K` files to/from Structured Text
+- **OpenPLC**: Parse and analyze OpenPLC `.st` files
+- **Siemens**: Parse and analyze Siemens `.scl`, `.udt`, and `.db` files
+- **Unified IR**: Common Intermediate Representation across all platforms
+- **Mixed-Platform Analysis**: Analyze projects using multiple vendor platforms together
 
 ### L5X to Structured Text (L5X2ST)
 - Convert single L5X files to ST format
@@ -112,25 +119,25 @@ pip install -r requirements.txt
 #### Convert L5X to ST
 ```bash
 # Convert single file
-python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st
+python -m crossplc.cli l5x2st -i project.L5X -o output.st
 
 # With IR validation (recommended)
-python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --use-ir
+python -m crossplc.cli l5x2st -i project.L5X -o output.st --use-ir
 
 # With verbose output
-python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st -v
+python -m crossplc.cli l5x2st -i project.L5X -o output.st -v
 ```
 
 #### Convert L5X to ST with L5K Overlay
 ```bash
 # Convert with L5K overlay for enhanced context
-python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K
+python -m crossplc.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K
 
 # With IR validation and L5K overlay
-python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K --use-ir
+python -m crossplc.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K --use-ir
 
 # With verbose output and overlay
-python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K -v
+python -m crossplc.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K -v
 ```
 
 #### Validate L5K Overlay Differences
@@ -148,60 +155,60 @@ python examples/validate_l5k_overlay_diff.py -i project1.L5X -l project1.L5K -i 
 #### Convert ST to L5X
 ```bash
 # Convert single file
-python -m l5x_st_compiler.cli st2l5x -i program.st -o output.L5X
+python -m crossplc.cli st2l5x -i program.st -o output.L5X
 
 # With IR validation (recommended)
-python -m l5x_st_compiler.cli st2l5x -i program.st -o output.L5X --use-ir
+python -m crossplc.cli st2l5x -i program.st -o output.L5X --use-ir
 
 # With verbose output
-python -m l5x_st_compiler.cli st2l5x -i program.st -o output.L5X -v
+python -m crossplc.cli st2l5x -i program.st -o output.L5X -v
 ```
 
 #### Export IR Components
 ```bash
 # Export basic IR components (tags and control flow)
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_dump.json --include tags,control_flow
+python -m crossplc.cli export-ir -i P1.L5X -o out/ir_dump.json --include tags,control_flow
 
 # Export all IR components
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_full.json --include tags,control_flow,data_types,function_blocks,interactions,routines,programs
+python -m crossplc.cli export-ir -i P1.L5X -o out/ir_full.json --include tags,control_flow,data_types,function_blocks,interactions,routines,programs
 
 # Export with verbose output
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_dump.json --include tags,control_flow -v
+python -m crossplc.cli export-ir -i P1.L5X -o out/ir_dump.json --include tags,control_flow -v
 
 # Export specific components only
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/tags_only.json --include tags
+python -m crossplc.cli export-ir -i P1.L5X -o out/tags_only.json --include tags
 
 # Export semantic analysis
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_semantic.json --include semantic
+python -m crossplc.cli export-ir -i P1.L5X -o out/ir_semantic.json --include semantic
 
 # Export control flow graph (CFG)
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_cfg.json --mode cfg
+python -m crossplc.cli export-ir -i P1.L5X -o out/ir_cfg.json --mode cfg
 
 # Export CFG with graph visualization
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o out/ir_cfg.json --mode cfg --export-graphs
+python -m crossplc.cli export-ir -i P1.L5X -o out/ir_cfg.json --mode cfg --export-graphs
 
 #### Multi-PLC Analysis
 ```bash
 # Analyze entire directory of PLCs
-python -m l5x_st_compiler.cli analyze-multi -d ./swatfiles -o interdependence.json -v
+python -m crossplc.cli analyze-multi -d ./swatfiles -o interdependence.json -v
 
 # Analyze specific PLC pairs with L5K overlays
-python -m l5x_st_compiler.cli analyze-multi \
+python -m crossplc.cli analyze-multi \
   --l5x P1.L5X --l5k P1.L5K \
   --l5x P2.L5X --l5k P2.L5K \
   -o test_pairing.json
 
 # Require L5K overlays for all PLCs
-python -m l5x_st_compiler.cli analyze-multi -d ./swatfiles --require-overlay -o strict.json
+python -m crossplc.cli analyze-multi -d ./swatfiles --require-overlay -o strict.json
 
 # Analyze with detailed component export
-python -m l5x_st_compiler.cli analyze-multi \
+python -m crossplc.cli analyze-multi \
   --l5x P1.L5X --st openplc.st \
   -o detailed.json \
   --include tags,control_flow,controllers,shared_tags
 
 # Export specific components only
-python -m l5x_st_compiler.cli analyze-multi \
+python -m crossplc.cli analyze-multi \
   --st controller.st \
   -o tags_only.json \
   --include tags
@@ -210,19 +217,19 @@ python -m l5x_st_compiler.cli analyze-multi \
 #### OpenPLC Integration
 ```bash
 # Analyze OpenPLC ST files
-python -m l5x_st_compiler.cli analyze-multi --st controller.st -o openplc.json
+python -m crossplc.cli analyze-multi --st controller.st -o openplc.json
 
 # Mixed Rockwell + OpenPLC analysis
-python -m l5x_st_compiler.cli analyze-multi \
+python -m crossplc.cli analyze-multi \
   --l5x P1.L5X --l5k P1.L5K \
   --st openplc_controller.st \
   -o mixed_analysis.json
 
 # Directory analysis with OpenPLC files
-python -m l5x_st_compiler.cli analyze-multi -d ./mixed_project -o analysis.json
+python -m crossplc.cli analyze-multi -d ./mixed_project -o analysis.json
 
 # Detailed component export for OpenPLC
-python -m l5x_st_compiler.cli analyze-multi \
+python -m crossplc.cli analyze-multi \
   --st controller.st \
   -o detailed.json \
   --include tags,control_flow,controllers
@@ -231,24 +238,24 @@ python -m l5x_st_compiler.cli analyze-multi \
 #### Siemens SCL Integration
 ```bash
 # Analyze Siemens SCL files
-python -m l5x_st_compiler.cli analyze-multi --scl main.scl -o siemens.json
+python -m crossplc.cli analyze-multi --scl main.scl -o siemens.json
 
 # Analyze Siemens UDT files
-python -m l5x_st_compiler.cli analyze-multi --scl types.udt -o udt.json
+python -m crossplc.cli analyze-multi --scl types.udt -o udt.json
 
 # Analyze Siemens DB files
-python -m l5x_st_compiler.cli analyze-multi --scl data.db -o db.json
+python -m crossplc.cli analyze-multi --scl data.db -o db.json
 
 # Complete Siemens project analysis
-python -m l5x_st_compiler.cli analyze-multi -d /path/to/siemens/project -o siemens_project.json
+python -m crossplc.cli analyze-multi -d /path/to/siemens/project -o siemens_project.json
 
 # Mixed three-platform analysis
-python -m l5x_st_compiler.cli analyze-multi \
+python -m crossplc.cli analyze-multi \
   --l5x rockwell.L5X --st openplc.st --scl siemens.scl \
   -o three_platform.json
 
 # Siemens with detailed component export
-python -m l5x_st_compiler.cli analyze-multi \
+python -m crossplc.cli analyze-multi \
   --scl main.scl --scl data.db \
   -o detailed_siemens.json \
   --include tags,control_flow,controllers
@@ -258,7 +265,7 @@ python -m l5x_st_compiler.cli analyze-multi \
 
 #### L5X to ST Conversion
 ```python
-from l5x_st_compiler import L5X2STConverter
+from crossplc import L5X2STConverter
 
 converter = L5X2STConverter()
 
@@ -272,8 +279,8 @@ print(str(st_file))
 
 #### L5K Overlay Integration
 ```python
-from l5x_st_compiler import L5X2STConverter
-from l5x_st_compiler.l5k_overlay import L5KOverlay
+from crossplc import L5X2STConverter
+from crossplc import L5KOverlay
 
 # Load L5K overlay for enhanced context
 overlay = L5KOverlay()
@@ -287,8 +294,8 @@ print(str(st_file))
 
 #### IR Validation and Round-Trip
 ```python
-from l5x_st_compiler.ir_converter import IRConverter
-from l5x_st_compiler import L5X2STConverter, ST2L5XConverter
+from crossplc import IRConverter
+from crossplc import L5X2STConverter, ST2L5XConverter
 
 # Load and validate L5X
 ir_converter = IRConverter()
@@ -312,8 +319,8 @@ print(f"Round-trip fidelity: {fidelity_score:.2%}")
 
 #### IR Comparison and Analysis
 ```python
-from l5x_st_compiler.ir_converter import IRConverter
-from l5x_st_compiler.l5k_overlay import L5KOverlay
+from crossplc import IRConverter
+from crossplc import L5KOverlay
 
 # Compare IR with and without overlay
 ir_converter = IRConverter()
@@ -373,7 +380,7 @@ print(f"Project has {summary['tags']['total_tags']} total tags")
 
 #### Semantic Analysis
 ```python
-from l5x_st_compiler.export_ir import export_ir_to_json
+from crossplc.export_ir import export_ir_to_json
 
 # Export semantic analysis
 export_data = export_ir_to_json(
@@ -392,7 +399,7 @@ annotations = semantic.get("control_flow_annotations", {})
 
 #### Control Flow Graph Analysis
 ```python
-from l5x_st_compiler.export_ir import export_ir_to_json, export_cfg_to_graphs
+from crossplc.export_ir import export_ir_to_json, export_cfg_to_graphs
 
 # Export CFG analysis
 export_data = export_ir_to_json(
@@ -415,7 +422,7 @@ print(f"Data Flow GraphML: {graph_files['dataflow_graphml']}")
 
 #### Multi-PLC Analysis
 ```python
-from l5x_st_compiler.project_ir import ProjectIR
+from crossplc.project_ir import ProjectIR
 from pathlib import Path
 
 # Load multiple PLCs with L5K overlays
@@ -447,8 +454,8 @@ print(f"Found {len(summary['conflicting_tags'])} conflicts")
 
 #### OpenPLC Integration
 ```python
-from l5x_st_compiler.openplc_parser import OpenPLCParser
-from l5x_st_compiler.project_ir import ProjectIR
+from crossplc.openplc_parser import OpenPLCParser
+from crossplc.project_ir import ProjectIR
 from pathlib import Path
 
 # Parse OpenPLC ST file
@@ -484,8 +491,8 @@ for plc_name, components in detailed.items():
 
 #### Siemens SCL Integration
 ```python
-from l5x_st_compiler.siemens_scl_parser import SiemensSCLParser
-from l5x_st_compiler.project_ir import ProjectIR
+from crossplc.siemens_scl_parser import SiemensSCLParser
+from crossplc.project_ir import ProjectIR
 from pathlib import Path
 
 # Parse Siemens SCL file
@@ -542,8 +549,8 @@ for plc_name, components in detailed.items():
 ## Project Structure
 
 ```
-l5x2ST/
-├── l5x_st_compiler/          # Main package
+CrossPLC/
+├── crossplc/                 # Main package
 │   ├── __init__.py           # Package initialization
 │   ├── constants.py          # Constants and configurations
 │   ├── models.py             # Data models and IR classes
@@ -719,7 +726,7 @@ The L5K overlay system enhances L5X to ST conversion by extracting additional pr
 ### Usage Examples
 ```bash
 # Basic overlay usage
-python -m l5x_st_compiler.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K
+python -m crossplc.cli l5x2st -i project.L5X -o output.st --l5k-overlay project.L5K
 
 # Compare with and without overlay
 python examples/validate_l5k_overlay_diff.py -i project.L5X -l project.L5K
@@ -727,13 +734,13 @@ python examples/validate_l5k_overlay_diff.py -i project.L5X -l project.L5K
 ### Analysis Examples
 ```bash
 # Semantic analysis
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o semantic.json --include semantic
+python -m crossplc.cli export-ir -i P1.L5X -o semantic.json --include semantic
 
 # CFG analysis with graph export
-python -m l5x_st_compiler.cli export-ir -i P1.L5X -o cfg.json --mode cfg --export-graphs
+python -m crossplc.cli export-ir -i P1.L5X -o cfg.json --mode cfg --export-graphs
 
 # Multi-PLC analysis
-python -m l5x_st_compiler.cli analyze-multi -d ./swatfiles -o interdependence.json -v
+python -m crossplc.cli analyze-multi -d ./swatfiles -o interdependence.json -v
 
 # Run example scripts
 python examples/ir_export_example.py

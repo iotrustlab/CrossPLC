@@ -8,10 +8,10 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from l5x_st_compiler.l5k_overlay import (
+from crossplc.l5k_overlay import (
     L5KOverlay, L5KTag, L5KTask, L5KProgram, L5KModule
 )
-from l5x_st_compiler.models import (
+from crossplc.models import (
     IRProject, IRController, IRProgram, IRRoutine, IRTag, IRDataType,
     TagScope, RoutineType
 )

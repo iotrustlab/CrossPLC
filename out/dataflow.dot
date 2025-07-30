@@ -1,0 +1,12 @@
+digraph DataFlow {
+  rankdir=LR;
+  node [shape=box, style=filled, fillcolor=lightcoral];
+  edge [color=red];
+
+  "IO" [label="IO"];
+  "Main_Seq" [label="Main_Seq"];
+  "Raw_Water" [label="Raw_Water"];
+  "Pre_Condition" [label="Pre_Condition"];
+
+  "Main_Seq" -> "Pre_Condition" [label=".ON\n(write_to_read)"];
+}
