@@ -347,7 +347,7 @@ Examples:
     
     parser.add_argument(
         'command',
-        choices=['l5x2st', 'st2l5x', 'extract-io', 'export-ir', 'analyze-multi', 'explore-lad'],
+                        choices=['l5x2st', 'st2l5x', 'extract-io', 'export-ir', 'analyze-multi', 'explore-lad', 'parse-txt', 'parse-scl', 'extract-fsm'],
         help='Command to execute'
     )
     
@@ -627,6 +627,7 @@ Examples:
         analyze_multi_parser.add_argument('--l5k', action='append', help='L5K file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--st', action='append', help='OpenPLC .st file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--scl', action='append', help='Siemens SCL file path (can be specified multiple times)')
+        analyze_multi_parser.add_argument('--cpp', action='append', help='TXT C++ file path (can be specified multiple times)')
         analyze_multi_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
         analyze_multi_parser.add_argument('--include', type=str, default='shared_tags,conflicts,controllers',
                                          help='Components to include (comma-separated: shared_tags,conflicts,controllers,tags,control_flow,data_types,function_blocks,interactions,routines,programs,semantic,cfg)')
@@ -654,16 +655,17 @@ Examples:
                         print(f"❌ Error: Directory '{analyze_multi_args.directory}' not found.")
                         sys.exit(1)
                     
-                    # Find all L5X, L5K, .st, .scl, .udt, and .db files
+                    # Find all L5X, L5K, .st, .scl, .udt, .db, and .cpp/.h files
                     l5x_files = list(dir_path.glob("*.L5X"))
                     st_files = list(dir_path.glob("*.st"))
                     scl_files = list(dir_path.glob("*.scl"))
                     udt_files = list(dir_path.glob("*.udt"))
                     db_files = list(dir_path.glob("*.db"))
+                    cpp_files = list(dir_path.glob("*.cpp")) + list(dir_path.glob("*.h")) + list(dir_path.glob("*.hpp"))
                     l5k_files = list(dir_path.glob("*.L5K"))
                     
                     # Combine all files for analysis
-                    all_files = l5x_files + st_files + scl_files + udt_files + db_files
+                    all_files = l5x_files + st_files + scl_files + udt_files + db_files + cpp_files
                     
                     # Match L5X and L5K files by name
                     for l5x_file in l5x_files:
@@ -676,9 +678,9 @@ Examples:
                         if matching_l5k:
                             l5k_overlays[plc_name] = matching_l5k
                     
-                    print(f"📁 Found {len(l5x_files)} L5X files, {len(st_files)} OpenPLC files, {len(scl_files)} Siemens SCL files, {len(udt_files)} Siemens UDT files, {len(db_files)} Siemens DB files, and {len(l5k_files)} L5K files in directory")
+                    print(f"📁 Found {len(l5x_files)} L5X files, {len(st_files)} OpenPLC files, {len(scl_files)} Siemens SCL files, {len(udt_files)} Siemens UDT files, {len(db_files)} Siemens DB files, {len(cpp_files)} TXT C++ files, and {len(l5k_files)} L5K files in directory")
                     
-                elif analyze_multi_args.l5x or analyze_multi_args.st or analyze_multi_args.scl:
+                elif analyze_multi_args.l5x or analyze_multi_args.st or analyze_multi_args.scl or analyze_multi_args.cpp:
                     # Load from explicit file lists (mixed L5X, .st, and .scl files)
                     all_files = []
                     
@@ -701,7 +703,11 @@ Examples:
                         scl_files = [Path(f) for f in analyze_multi_args.scl]
                         all_files.extend(scl_files)
                     
-                    print(f"📁 Processing {len(all_files)} files ({len(l5x_files) if 'l5x_files' in locals() else 0} L5X, {len(st_files) if 'st_files' in locals() else 0} OpenPLC, {len(scl_files) if 'scl_files' in locals() else 0} Siemens SCL, {len(udt_files) if 'udt_files' in locals() else 0} Siemens UDT, {len(db_files) if 'db_files' in locals() else 0} Siemens DB) with {len(l5k_overlays)} L5K overlays")
+                    if analyze_multi_args.cpp:
+                        cpp_files = [Path(f) for f in analyze_multi_args.cpp]
+                        all_files.extend(cpp_files)
+                    
+                    print(f"📁 Processing {len(all_files)} files ({len(l5x_files) if 'l5x_files' in locals() else 0} L5X, {len(st_files) if 'st_files' in locals() else 0} OpenPLC, {len(scl_files) if 'scl_files' in locals() else 0} Siemens SCL, {len(udt_files) if 'udt_files' in locals() else 0} Siemens UDT, {len(db_files) if 'db_files' in locals() else 0} Siemens DB, {len(cpp_files) if 'cpp_files' in locals() else 0} TXT C++) with {len(l5k_overlays)} L5K overlays")
                     
 
                 
@@ -881,7 +887,229 @@ Examples:
             # If argparse fails, show help
             explore_lad_parser.print_help()
             sys.exit(1)
-
+    elif args.command == 'parse-txt':
+        # Parse the remaining arguments for parse-txt
+        parse_txt_parser = argparse.ArgumentParser()
+        parse_txt_parser.add_argument('--input', '-i', required=True, help='Input TXT C++ control logic file')
+        parse_txt_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
+        parse_txt_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+        
+        try:
+            parse_txt_args = parse_txt_parser.parse_args(remaining)
+            
+            # Call the parse_txt function directly
+            if parse_txt_args.verbose:
+                logging.basicConfig(level=logging.DEBUG)
+            
+            try:
+                from pathlib import Path
+                from .txt_parser import TXTParser
+                import json
+                from datetime import datetime
+                
+                print(f"📖 Reading TXT control logic file: {parse_txt_args.input}")
+                
+                # Load and parse the file
+                file_path = Path(parse_txt_args.input)
+                if not file_path.exists():
+                    print(f"❌ Error: File '{parse_txt_args.input}' not found.")
+                    sys.exit(1)
+                
+                # Parse the file
+                parser = TXTParser()
+                ir_project = parser.parse_txt_file(str(file_path))
+                
+                print(f"🔄 Parsing TXT control logic...")
+                print(f"  - Controller: {ir_project.controller.name}")
+                print(f"  - Programs: {len(ir_project.programs)}")
+                print(f"  - Controller tags: {len(ir_project.controller.tags)}")
+                
+                # Prepare output data
+                output_data = {
+                    'source_file': str(file_path),
+                    'parse_time': datetime.now().isoformat(),
+                    'controller': {
+                        'name': ir_project.controller.name,
+                        'source_type': ir_project.controller.source_type,
+                        'total_tags': len(ir_project.controller.tags)
+                    },
+                    'programs': []
+                }
+                
+                # Extract program information
+                for program in ir_project.programs:
+                    program_info = {
+                        'name': program.name,
+                        'source_type': program.source_type,
+                        'routines': []
+                    }
+                    
+                    for routine in program.routines:
+                        routine_info = {
+                            'name': routine.name,
+                            'type': routine.routine_type.value,
+                            'description': routine.description,
+                            'content': routine.content
+                        }
+                        program_info['routines'].append(routine_info)
+                    
+                    output_data['programs'].append(program_info)
+                
+                # Write JSON output
+                with open(parse_txt_args.output, 'w') as f:
+                    json.dump(output_data, f, indent=2)
+                
+                print(f"✅ Successfully parsed TXT control logic to {parse_txt_args.output}")
+                
+                # Print summary
+                total_routines = sum(len(prog.routines) for prog in ir_project.programs)
+                input_tags = [tag for tag in ir_project.controller.tags if 'input' in tag.description.lower() if tag.description]
+                output_tags = [tag for tag in ir_project.controller.tags if 'output' in tag.description.lower() if tag.description]
+                internal_tags = [tag for tag in ir_project.controller.tags if not any(x in tag.description.lower() if tag.description else False for x in ['input', 'output'])]
+                
+                print(f"📊 Summary:")
+                print(f"  - Controller: {ir_project.controller.name}")
+                print(f"  - Programs: {len(ir_project.programs)}")
+                print(f"  - Routines: {total_routines}")
+                print(f"  - Input tags: {len(input_tags)}")
+                print(f"  - Output tags: {len(output_tags)}")
+                print(f"  - Internal tags: {len(internal_tags)}")
+                
+                if parse_txt_args.verbose:
+                    print(f"\n📋 Detailed Summary:")
+                    for program in ir_project.programs:
+                        print(f"  - Program: {program.name}")
+                        for routine in program.routines:
+                            print(f"    - Routine: {routine.name} ({routine.routine_type.value})")
+                    
+                    if ir_project.controller.tags:
+                        print(f"\n📋 Tags:")
+                        for tag in ir_project.controller.tags[:10]:  # Show first 10
+                            print(f"  - {tag.name} ({tag.data_type}): {tag.description}")
+                
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                if parse_txt_args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                sys.exit(1)
+            
+        except SystemExit:
+            # If argparse fails, show help
+            parse_txt_parser.print_help()
+            sys.exit(1)
+    elif args.command == 'parse-scl':
+        # Parse the remaining arguments for parse-scl
+        parse_scl_parser = argparse.ArgumentParser()
+        parse_scl_parser.add_argument('--input', '-i', required=True, help='Input Siemens SCL file')
+        parse_scl_parser.add_argument('--output', '-o', required=True, help='Output JSON file')
+        parse_scl_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+        
+        try:
+            parse_scl_args = parse_scl_parser.parse_args(remaining)
+            
+            # Call the parse_scl function directly
+            if parse_scl_args.verbose:
+                logging.basicConfig(level=logging.DEBUG)
+            
+            try:
+                from pathlib import Path
+                from .siemens_scl_parser import SiemensSCLParser
+                import json
+                from datetime import datetime
+                
+                print(f"📖 Reading Siemens SCL file: {parse_scl_args.input}")
+                
+                # Load and parse the file
+                file_path = Path(parse_scl_args.input)
+                if not file_path.exists():
+                    print(f"❌ Error: File '{parse_scl_args.input}' not found.")
+                    sys.exit(1)
+                
+                # Parse the file
+                parser = SiemensSCLParser()
+                ir_project = parser.parse_scl_file(str(file_path))
+                
+                print(f"🔄 Parsing Siemens SCL...")
+                print(f"  - Controller: {ir_project.controller.name}")
+                print(f"  - Programs: {len(ir_project.programs)}")
+                print(f"  - Controller tags: {len(ir_project.controller.tags)}")
+                
+                # Prepare output data
+                output_data = {
+                    'source_file': str(file_path),
+                    'parse_time': datetime.now().isoformat(),
+                    'controller': {
+                        'name': ir_project.controller.name,
+                        'source_type': ir_project.controller.source_type,
+                        'total_tags': len(ir_project.controller.tags)
+                    },
+                    'programs': []
+                }
+                
+                # Extract program information
+                for program in ir_project.programs:
+                    program_info = {
+                        'name': program.name,
+                        'source_type': program.source_type,
+                        'routines': []
+                    }
+                    
+                    for routine in program.routines:
+                        routine_info = {
+                            'name': routine.name,
+                            'type': routine.routine_type.value,
+                            'description': routine.description,
+                            'content': routine.content
+                        }
+                        program_info['routines'].append(routine_info)
+                    
+                    output_data['programs'].append(program_info)
+                
+                # Write JSON output
+                with open(parse_scl_args.output, 'w') as f:
+                    json.dump(output_data, f, indent=2)
+                
+                print(f"✅ Successfully parsed Siemens SCL to {parse_scl_args.output}")
+                
+                # Print summary
+                total_routines = sum(len(prog.routines) for prog in ir_project.programs)
+                input_tags = [tag for tag in ir_project.controller.tags if 'input' in tag.description.lower()]
+                output_tags = [tag for tag in ir_project.controller.tags if 'output' in tag.description.lower()]
+                internal_tags = [tag for tag in ir_project.controller.tags if 'internal' in tag.description.lower()]
+                
+                print(f"📊 Summary:")
+                print(f"  - Controller: {ir_project.controller.name}")
+                print(f"  - Programs: {len(ir_project.programs)}")
+                print(f"  - Routines: {total_routines}")
+                print(f"  - Input tags: {len(input_tags)}")
+                print(f"  - Output tags: {len(output_tags)}")
+                print(f"  - Internal tags: {len(internal_tags)}")
+                
+                if parse_scl_args.verbose:
+                    print(f"\n📋 Detailed Summary:")
+                    for program in ir_project.programs:
+                        print(f"  - Program: {program.name}")
+                        for routine in program.routines:
+                            print(f"    - Routine: {routine.name} ({routine.routine_type.value})")
+                    
+                    if ir_project.controller.tags:
+                        print(f"\n📋 Tags:")
+                        for tag in ir_project.controller.tags[:10]:  # Show first 10
+                            print(f"  - {tag.name} ({tag.data_type}): {tag.description}")
+                
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                if parse_scl_args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                sys.exit(1)
+            
+        except SystemExit:
+            # If argparse fails, show help
+            parse_scl_parser.print_help()
+            sys.exit(1)
+    
 
 if __name__ == '__main__':
     main() 
