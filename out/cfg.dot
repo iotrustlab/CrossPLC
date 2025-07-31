@@ -8,7 +8,7 @@ digraph CFG {
     style=filled;
     color=lightgrey;
 
-    "IO_entry" [label="entry\n(*DIGITAL INPUTS*)\nDI_WIFI_PLC_1		:=RIO1:0:I.Data.0;\nDI_WIFI_RIO_1		:=RIO1:0:I.Data.1;\n...\nDefs: .RIO_WIFI, .PLC_WIFI\nUses: ", fillcolor="lightblue"];
+    "IO_entry" [label="entry\n(*DIGITAL INPUTS*)\nDI_WIFI_PLC_1		:=RIO1:0:I.Data.0;\nDI_WIFI_RIO_1		:=RIO1:0:I.Data.1;\n...\nDefs: .PLC_WIFI, .RIO_WIFI\nUses: ", fillcolor="lightblue"];
   }
 
   subgraph cluster_Main_Seq {
@@ -34,8 +34,8 @@ digraph CFG {
     "Main_Seq_b8" [label="b8\nIF: HMI_PLANT.STOP\nDefs: \nUses: .STOP", fillcolor="lightgreen"];
     "Main_Seq_b9" [label="b9\nCASE HMI_P1_STATE OF", fillcolor="lightyellow"];
     "Main_Seq_b9" [label="b9\nCASE HMI_P1_STATE OF", fillcolor="lightyellow"];
-    "Main_Seq_b10" [label="b10\nIF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON\nDefs: \nUses: .AL, .START, .ON...", fillcolor="lightgreen"];
-    "Main_Seq_b10" [label="b10\nIF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON\nDefs: \nUses: .AL, .START, .ON...", fillcolor="lightgreen"];
+    "Main_Seq_b10" [label="b10\nIF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON\nDefs: \nUses: .START, .ON, .AL...", fillcolor="lightgreen"];
+    "Main_Seq_b10" [label="b10\nIF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON\nDefs: \nUses: .START, .ON, .AL...", fillcolor="lightgreen"];
     "Main_Seq_b11" [label="b11\nIF: HMI_P1_SHUTDOWN", fillcolor="lightgreen"];
     "Main_Seq_b12" [label="b12\nIF: HMI_LIT301.AH\nDefs: \nUses: .AH", fillcolor="lightgreen"];
     "Main_Seq_b12" [label="b12\nIF: HMI_LIT301.AH\nDefs: \nUses: .AH", fillcolor="lightgreen"];
@@ -128,8 +128,8 @@ digraph CFG {
     "Pre_Condition_b15" [label="b15\nIF: HMI_PLANT_RESET.ON\nDefs: \nUses: .ON", fillcolor="lightgreen"];
     "Pre_Condition_b16" [label="b16\nIF: HMI_PLANT_AUTO.ON\nDefs: \nUses: .ON", fillcolor="lightgreen"];
     "Pre_Condition_b16" [label="b16\nIF: HMI_PLANT_AUTO.ON\nDefs: \nUses: .ON", fillcolor="lightgreen"];
-    "Pre_Condition_b17" [label="b17\nIF: HMI_PLANT_AUTO.OFF\nDefs: .SHUTODWN2, .SHUTODWN5, .SD...\nUses: .HTY, .ALL, .DN...", fillcolor="lightgreen"];
-    "Pre_Condition_b17" [label="b17\nIF: HMI_PLANT_AUTO.OFF\nDefs: .SHUTODWN2, .SHUTODWN5, .SD...\nUses: .HTY, .ALL, .DN...", fillcolor="lightgreen"];
+    "Pre_Condition_b17" [label="b17\nIF: HMI_PLANT_AUTO.OFF\nDefs: .SHUTODWN5, .ON, .PERMISSIVE5...\nUses: .ON, .ALL, .OFF...", fillcolor="lightgreen"];
+    "Pre_Condition_b17" [label="b17\nIF: HMI_PLANT_AUTO.OFF\nDefs: .SHUTODWN5, .ON, .PERMISSIVE5...\nUses: .ON, .ALL, .OFF...", fillcolor="lightgreen"];
     "Pre_Condition_entry" -> "Pre_Condition_b15";
     "Pre_Condition_b15" -> "Pre_Condition_b16";
     "Pre_Condition_b15" -> "Pre_Condition_b16" [label="true"];

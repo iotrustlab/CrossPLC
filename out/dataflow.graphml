@@ -11,19 +11,19 @@
   <graph id="dataflow" edgedefault="directed">
 
     <node id="n0">
-      <data key="label">IO</data>
-    </node>
-    <node id="n1">
       <data key="label">Main_Seq</data>
     </node>
-    <node id="n2">
+    <node id="n1">
       <data key="label">Raw_Water</data>
     </node>
-    <node id="n3">
+    <node id="n2">
       <data key="label">Pre_Condition</data>
     </node>
+    <node id="n3">
+      <data key="label">IO</data>
+    </node>
 
-    <edge id="e0" source="n1" target="n3">
+    <edge id="e0" source="n0" target="n2">
       <data key="tag">.ON</data>
       <data key="flow_type">write_to_read</data>
     </edge>

@@ -18,7 +18,7 @@
       <data key="label">entry - 81 instructions</data>
       <data key="type">instruction</data>
       <data key="routine">IO</data>
-      <data key="defs">.RIO_WIFI,.PLC_WIFI</data>
+      <data key="defs">.PLC_WIFI,.RIO_WIFI</data>
       <data key="uses"></data>
     </node>
     <node id="n1">
@@ -152,14 +152,14 @@
       <data key="type">branch</data>
       <data key="routine">Main_Seq</data>
       <data key="defs"></data>
-      <data key="uses">.AL,.START,.ON,.AH</data>
+      <data key="uses">.START,.ON,.AL,.AH</data>
     </node>
     <node id="n20">
       <data key="label">b10 - IF: HMI_PLANT_READY AND HMI_PLANT.START AND HMI_P1_PERMISSIVE.ON</data>
       <data key="type">branch</data>
       <data key="routine">Main_Seq</data>
       <data key="defs"></data>
-      <data key="uses">.AL,.START,.ON,.AH</data>
+      <data key="uses">.START,.ON,.AL,.AH</data>
     </node>
     <node id="n21">
       <data key="label">b11 - IF: HMI_P1_SHUTDOWN</data>
@@ -249,15 +249,15 @@
       <data key="label">b17 - IF: HMI_PLANT_AUTO.OFF</data>
       <data key="type">branch</data>
       <data key="routine">Pre_Condition</data>
-      <data key="defs">.SHUTODWN2,.SHUTODWN5,.SD,.PERMISSIVE1,.SHUTODWN1,.PERMISSIVE3,.SHUTODWN3,.PERMISSIVE5,.PERMISSIVE4,.PRE,.ON,.SHUTODWN4,.PERMISSIVE2</data>
-      <data key="uses">.HTY,.ALL,.DN,.ON,.STATUS,.OFF</data>
+      <data key="defs">.SHUTODWN5,.ON,.PERMISSIVE5,.SHUTODWN2,.PRE,.SHUTODWN4,.SHUTODWN1,.PERMISSIVE3,.PERMISSIVE1,.SD,.SHUTODWN3,.PERMISSIVE4,.PERMISSIVE2</data>
+      <data key="uses">.ON,.ALL,.OFF,.STATUS,.HTY,.DN</data>
     </node>
     <node id="n34">
       <data key="label">b17 - IF: HMI_PLANT_AUTO.OFF</data>
       <data key="type">branch</data>
       <data key="routine">Pre_Condition</data>
-      <data key="defs">.SHUTODWN2,.SHUTODWN5,.SD,.PERMISSIVE1,.SHUTODWN1,.PERMISSIVE3,.SHUTODWN3,.PERMISSIVE5,.PERMISSIVE4,.PRE,.ON,.SHUTODWN4,.PERMISSIVE2</data>
-      <data key="uses">.HTY,.ALL,.DN,.ON,.STATUS,.OFF</data>
+      <data key="defs">.SHUTODWN5,.ON,.PERMISSIVE5,.SHUTODWN2,.PRE,.SHUTODWN4,.SHUTODWN1,.PERMISSIVE3,.PERMISSIVE1,.SD,.SHUTODWN3,.PERMISSIVE4,.PERMISSIVE2</data>
+      <data key="uses">.ON,.ALL,.OFF,.STATUS,.HTY,.DN</data>
     </node>
     <node id="n35">
       <data key="label">entry - 231 instructions</data>

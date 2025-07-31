@@ -86,22 +86,21 @@ class SiemensSCLParser:
         """Parse variable declarations from SCL content."""
         variables = []
         
-        # Parse TYPE definitions (user-defined data types)
-        type_pattern = r'TYPE\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?VERSION\s*:\s*[^;]*?STRUCT\s*(.*?)END_STRUCT;?\s*END_TYPE'
+        # Parse TYPE definitions (user-defined data types) - simplified pattern
+        type_pattern = r'TYPE\s+"([^"]+)"\s*VERSION\s*:\s*[^;]*?STRUCT\s*(.*?)END_STRUCT\s*END_TYPE'
         type_matches = re.finditer(type_pattern, content, re.DOTALL | re.IGNORECASE)
         
         for match in type_matches:
             type_name = match.group(1)
             type_content = match.group(2)
             
-            # Parse members of the type
-            member_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
+            # Parse members of the type - simplified pattern
+            member_pattern = r'(\w+)\s*:\s*([^;]+?);'
             member_matches = re.finditer(member_pattern, type_content)
             
             for member_match in member_matches:
                 member_name = member_match.group(1)
                 member_type = member_match.group(2).strip()
-                member_value = member_match.group(3) if member_match.group(3) else None
                 
                 # Handle array types
                 if '[' in member_type:
@@ -116,47 +115,11 @@ class SiemensSCLParser:
                     name=f"{type_name}.{member_name}",
                     data_type=member_type,
                     scope="TYPE",
-                    initial_value=member_value,
                     description=f"Member of {type_name}"
                 )
                 variables.append(variable)
         
-        # Fallback: Parse TYPE definitions without TITLE
-        type_fallback_pattern = r'TYPE\s+"([^"]+)"\s*VERSION\s*:\s*[^;]*?STRUCT\s*(.*?)END_STRUCT;?\s*END_TYPE'
-        type_fallback_matches = re.finditer(type_fallback_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for match in type_fallback_matches:
-            type_name = match.group(1)
-            type_content = match.group(2)
-            
-            # Parse members of the type
-            member_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
-            member_matches = re.finditer(member_pattern, type_content)
-            
-            for member_match in member_matches:
-                member_name = member_match.group(1)
-                member_type = member_match.group(2).strip()
-                member_value = member_match.group(3) if member_match.group(3) else None
-                
-                # Handle array types
-                if '[' in member_type:
-                    base_type = member_type.split('[')[0].strip()
-                    member_type = base_type
-                
-                # Handle user-defined types
-                if member_type.startswith('"') and member_type.endswith('"'):
-                    member_type = member_type[1:-1]  # Remove quotes
-                
-                variable = SCLVariable(
-                    name=f"{type_name}.{member_name}",
-                    data_type=member_type,
-                    scope="TYPE",
-                    initial_value=member_value,
-                    description=f"Member of {type_name}"
-                )
-                variables.append(variable)
-        
-        # Parse DATA_BLOCK definitions
+        # Parse DATA_BLOCK definitions - simplified pattern
         db_pattern = r'DATA_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?NON_RETAIN\s*STRUCT\s*(.*?)END_STRUCT'
         db_matches = re.finditer(db_pattern, content, re.DOTALL | re.IGNORECASE)
         
@@ -164,234 +127,70 @@ class SiemensSCLParser:
             db_name = match.group(1)
             db_struct_content = match.group(2)
             
-            # Parse STRUCT members
-            struct_member_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
+            # Parse STRUCT members - simplified pattern
+            struct_member_pattern = r'(\w+)\s*:\s*([^;]+?);'
             struct_matches = re.finditer(struct_member_pattern, db_struct_content)
             
             for struct_match in struct_matches:
                 member_name = struct_match.group(1)
                 member_type = struct_match.group(2).strip()
-                member_value = struct_match.group(3) if struct_match.group(3) else None
                 
                 # Handle array types
-                member_type = self._clean_data_type(member_type)
+                if '[' in member_type:
+                    base_type = member_type.split('[')[0].strip()
+                    member_type = base_type
+                
+                # Handle user-defined types
+                if member_type.startswith('"') and member_type.endswith('"'):
+                    member_type = member_type[1:-1]  # Remove quotes
                 
                 variable = SCLVariable(
                     name=f"{db_name}.{member_name}",
                     data_type=member_type,
                     scope="DATA_BLOCK",
-                    initial_value=member_value,
                     description=f"Member of data block {db_name}"
                 )
                 variables.append(variable)
         
-        # Fallback: Parse DATA_BLOCK without STRUCT (simple format)
-        db_simple_pattern = r'DATA_BLOCK\s+"([^"]+)"\s*{.*?}.*?VERSION\s*:\s*[^;]*?NON_RETAIN\s*"([^"]+)"\s*BEGIN\s*(.*?)END_DATA_BLOCK'
-        db_simple_matches = re.finditer(db_simple_pattern, content, re.DOTALL | re.IGNORECASE)
+        # Parse VAR sections in FUNCTION_BLOCK and FUNCTION
+        var_patterns = [
+            r'VAR\s*(.*?)END_VAR',
+            r'VAR_INPUT\s*(.*?)END_VAR',
+            r'VAR_OUTPUT\s*(.*?)END_VAR',
+            r'VAR_IN_OUT\s*(.*?)END_VAR',
+            r'VAR_TEMP\s*(.*?)END_VAR',
+            r'VAR_CONSTANT\s*(.*?)END_VAR'
+        ]
         
-        for match in db_simple_matches:
-            db_name = match.group(1)
-            db_type = match.group(2)
-            db_content = match.group(3)
-            
-            # Create a variable for the data block
-            variable = SCLVariable(
-                name=db_name,
-                data_type=db_type,
-                scope="DATA_BLOCK",
-                description=f"Siemens data block: {db_name}"
-            )
-            variables.append(variable)
-        
-        # Parse FUNCTION_BLOCK definitions and their variables
-        fb_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?VAR_INPUT\s*(.*?)END_VAR'
-        fb_matches = re.finditer(fb_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for match in fb_matches:
-            fb_name = match.group(1)
-            var_input_content = match.group(2)
-            
-            # Parse VAR_INPUT variables
-            var_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
-            var_matches = re.finditer(var_pattern, var_input_content)
-            
-            for var_match in var_matches:
-                var_name = var_match.group(1)
-                var_type = var_match.group(2).strip()
-                var_value = var_match.group(3) if var_match.group(3) else None
+        for var_pattern in var_patterns:
+            var_matches = re.finditer(var_pattern, content, re.DOTALL | re.IGNORECASE)
+            for match in var_matches:
+                var_content = match.group(1)
                 
-                # Skip Siemens-specific attributes
-                if var_name.startswith('S7_'):
-                    continue
+                # Parse variable declarations in VAR sections
+                var_decl_pattern = r'(\w+)\s*:\s*([^;]+?);'
+                var_decl_matches = re.finditer(var_decl_pattern, var_content)
                 
-                # Handle array types and complex types
-                var_type = self._clean_data_type(var_type)
-                
-                # Skip if it's just an attribute
-                if var_type == "ATTRIBUTE":
-                    continue
-                
-                variable = SCLVariable(
-                    name=f"{fb_name}.{var_name}",
-                    data_type=var_type,
-                    scope="FUNCTION_BLOCK_INPUT",
-                    initial_value=var_value,
-                    description=f"Input variable of {fb_name}"
-                )
-                variables.append(variable)
-        
-        # Parse VAR_OUTPUT sections
-        fb_output_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?VAR_OUTPUT\s*(.*?)END_VAR'
-        fb_output_matches = re.finditer(fb_output_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for match in fb_output_matches:
-            fb_name = match.group(1)
-            var_output_content = match.group(2)
-            
-            # Parse VAR_OUTPUT variables
-            var_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
-            var_matches = re.finditer(var_pattern, var_output_content)
-            
-            for var_match in var_matches:
-                var_name = var_match.group(1)
-                var_type = var_match.group(2).strip()
-                var_value = var_match.group(3) if var_match.group(3) else None
-                
-                # Skip Siemens-specific attributes
-                if var_name.startswith('S7_'):
-                    continue
-                
-                var_type = self._clean_data_type(var_type)
-                
-                # Skip if it's just an attribute
-                if var_type == "ATTRIBUTE":
-                    continue
-                
-                variable = SCLVariable(
-                    name=f"{fb_name}.{var_name}",
-                    data_type=var_type,
-                    scope="FUNCTION_BLOCK_OUTPUT",
-                    initial_value=var_value,
-                    description=f"Output variable of {fb_name}"
-                )
-                variables.append(variable)
-        
-        # Parse VAR sections (local variables)
-        fb_var_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?VAR\s*(.*?)END_VAR'
-        fb_var_matches = re.finditer(fb_var_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for match in fb_var_matches:
-            fb_name = match.group(1)
-            var_content = match.group(2)
-            
-            # Parse VAR variables
-            var_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
-            var_matches = re.finditer(var_pattern, var_content)
-            
-            for var_match in var_matches:
-                var_name = var_match.group(1)
-                var_type = var_match.group(2).strip()
-                var_value = var_match.group(3) if var_match.group(3) else None
-                
-                # Skip Siemens-specific attributes
-                if var_name.startswith('S7_'):
-                    continue
-                
-                var_type = self._clean_data_type(var_type)
-                
-                # Skip if it's just an attribute
-                if var_type == "ATTRIBUTE":
-                    continue
-                
-                variable = SCLVariable(
-                    name=f"{fb_name}.{var_name}",
-                    data_type=var_type,
-                    scope="FUNCTION_BLOCK_LOCAL",
-                    initial_value=var_value,
-                    description=f"Local variable of {fb_name}"
-                )
-                variables.append(variable)
-        
-        # Parse VAR_TEMP sections (temporary variables)
-        fb_temp_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?VAR_TEMP\s*(.*?)END_VAR'
-        fb_temp_matches = re.finditer(fb_temp_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for match in fb_temp_matches:
-            fb_name = match.group(1)
-            temp_content = match.group(2)
-            
-            # Parse VAR_TEMP variables
-            var_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
-            var_matches = re.finditer(var_pattern, temp_content)
-            
-            for var_match in var_matches:
-                var_name = var_match.group(1)
-                var_type = var_match.group(2).strip()
-                var_value = var_match.group(3) if var_match.group(3) else None
-                
-                var_type = self._clean_data_type(var_type)
-                
-                variable = SCLVariable(
-                    name=f"{fb_name}.{var_name}",
-                    data_type=var_type,
-                    scope="FUNCTION_BLOCK_TEMP",
-                    initial_value=var_value,
-                    description=f"Temporary variable of {fb_name}"
-                )
-                variables.append(variable)
-        
-        # Parse VAR_IN_OUT sections (in-out variables)
-        fb_inout_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?VAR_IN_OUT\s*(.*?)END_VAR'
-        fb_inout_matches = re.finditer(fb_inout_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for match in fb_inout_matches:
-            fb_name = match.group(1)
-            inout_content = match.group(2)
-            
-            # Parse VAR_IN_OUT variables
-            var_pattern = r'(\w+)\s*:\s*([^;]+?)(?:\s*:=\s*([^;]+))?;'
-            var_matches = re.finditer(var_pattern, inout_content)
-            
-            for var_match in var_matches:
-                var_name = var_match.group(1)
-                var_type = var_match.group(2).strip()
-                var_value = var_match.group(3) if var_match.group(3) else None
-                
-                var_type = self._clean_data_type(var_type)
-                
-                variable = SCLVariable(
-                    name=f"{fb_name}.{var_name}",
-                    data_type=var_type,
-                    scope="FUNCTION_BLOCK_INOUT",
-                    initial_value=var_value,
-                    description=f"In-out variable of {fb_name}"
-                )
-                variables.append(variable)
-        
-        # Parse CONST sections (constants)
-        fb_const_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?CONST\s*(.*?)END_CONST'
-        fb_const_matches = re.finditer(fb_const_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for match in fb_const_matches:
-            fb_name = match.group(1)
-            const_content = match.group(2)
-            
-            # Parse CONST variables
-            var_pattern = r'(\w+)\s*:=\s*([^;]+?);'
-            var_matches = re.finditer(var_pattern, const_content)
-            
-            for var_match in var_matches:
-                var_name = var_match.group(1)
-                var_value = var_match.group(2).strip()
-                
-                variable = SCLVariable(
-                    name=f"{fb_name}.{var_name}",
-                    data_type="CONST",
-                    scope="FUNCTION_BLOCK_CONST",
-                    initial_value=var_value,
-                    description=f"Constant of {fb_name}"
-                )
-                variables.append(variable)
+                for var_decl_match in var_decl_matches:
+                    var_name = var_decl_match.group(1)
+                    var_type = var_decl_match.group(2).strip()
+                    
+                    # Handle array types
+                    if '[' in var_type:
+                        base_type = var_type.split('[')[0].strip()
+                        var_type = base_type
+                    
+                    # Handle user-defined types
+                    if var_type.startswith('"') and var_type.endswith('"'):
+                        var_type = var_type[1:-1]  # Remove quotes
+                    
+                    variable = SCLVariable(
+                        name=var_name,
+                        data_type=var_type,
+                        scope="VAR",
+                        description=f"Variable from {var_pattern.split('_')[1] if '_' in var_pattern else 'VAR'} section"
+                    )
+                    variables.append(variable)
         
         return variables
     
@@ -435,25 +234,24 @@ class SiemensSCLParser:
         """Parse routine definitions from SCL content."""
         routines = []
         
-        # Parse ORGANIZATION_BLOCK (main program)
-        ob_pattern = r'ORGANIZATION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*"([^"]*)"\s*{.*?}.*?VERSION\s*:\s*[^;]*?BEGIN\s*(.*?)END_ORGANIZATION_BLOCK'
+        # Parse ORGANIZATION_BLOCK (main program) - simplified pattern
+        ob_pattern = r'ORGANIZATION_BLOCK\s+"([^"]+)"\s*VERSION\s*:\s*[^;]*?BEGIN\s*(.*?)END_ORGANIZATION_BLOCK'
         ob_matches = re.finditer(ob_pattern, content, re.DOTALL | re.IGNORECASE)
         
         for match in ob_matches:
             ob_name = match.group(1)
-            ob_title = match.group(2)
-            ob_content = match.group(3)
+            ob_content = match.group(2)
             
             routine = {
                 'name': ob_name,
                 'routine_type': 'ST',  # SCL is essentially ST
                 'content': ob_content.strip(),
-                'description': ob_title
+                'description': f'Siemens SCL organization block: {ob_name}'
             }
             routines.append(routine)
         
-        # Parse FUNCTION_BLOCK (function blocks)
-        fb_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?BEGIN\s*(.*?)END_FUNCTION_BLOCK'
+        # Parse FUNCTION_BLOCK (function blocks) - simplified pattern
+        fb_pattern = r'FUNCTION_BLOCK\s+"([^"]+)"\s*VERSION\s*:\s*[^;]*?BEGIN\s*(.*?)END_FUNCTION_BLOCK'
         fb_matches = re.finditer(fb_pattern, content, re.DOTALL | re.IGNORECASE)
         
         for match in fb_matches:
@@ -468,8 +266,8 @@ class SiemensSCLParser:
             }
             routines.append(routine)
         
-        # Parse FUNCTION (functions)
-        func_pattern = r'FUNCTION\s+"([^"]+)"\s*:\s*([^;]*?)\s*TITLE\s*=\s*[^;]*?{.*?}.*?VERSION\s*:\s*[^;]*?BEGIN\s*(.*?)END_FUNCTION'
+        # Parse FUNCTION (functions) - simplified pattern
+        func_pattern = r'FUNCTION\s+"([^"]+)"\s*:\s*([^;]*?)\s*VERSION\s*:\s*[^;]*?BEGIN\s*(.*?)END_FUNCTION'
         func_matches = re.finditer(func_pattern, content, re.DOTALL | re.IGNORECASE)
         
         for match in func_matches:
@@ -485,7 +283,7 @@ class SiemensSCLParser:
             }
             routines.append(routine)
         
-        # If no ORGANIZATION_BLOCK or FUNCTION_BLOCK found, treat the entire content as a main routine
+        # If no routines found, treat the entire content as a main routine
         if not routines:
             routine = {
                 'name': 'Main',

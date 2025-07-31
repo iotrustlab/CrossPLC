@@ -14,6 +14,7 @@ from .ir_converter import IRConverter
 from .l5k_overlay import L5KOverlay
 from .models import IRProject
 from .siemens_lad_parser import SiemensLADParser
+from .txt_parser import TXTParser
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,13 @@ class ProjectIR:
                 plc_ir_map[plc_name] = ir_project
                 logger.info(f"Loaded Siemens LAD/FBD project: {file_path.name} as {plc_name}")
                 
+            elif file_path.suffix.lower() in ['.cpp', '.h', '.hpp']:
+                # Handle TXT C++ control logic files
+                ir_project = cls._load_txt_ir(file_path)
+                plc_name = ir_project.controller.name
+                plc_ir_map[plc_name] = ir_project
+                logger.info(f"Loaded TXT C++ control logic file: {file_path.name} as {plc_name}")
+                
             else:
                 logger.warning(f"⚠️ Unsupported file type: {file_path.suffix}")
         
@@ -189,6 +197,13 @@ class ProjectIR:
         """Load Siemens LAD/FBD project file and convert to IR."""
         parser = SiemensLADParser()
         ir_project = parser.parse_project(zap_path)
+        return ir_project
+    
+    @classmethod
+    def _load_txt_ir(cls, txt_path: Path) -> IRProject:
+        """Load TXT C++ control logic file and convert to IR."""
+        parser = TXTParser()
+        ir_project = parser.parse_txt_file(str(txt_path))
         return ir_project
     
     def _build_tag_usage_maps(self):

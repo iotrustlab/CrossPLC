@@ -235,6 +235,7 @@ class IRController:
     function_blocks: List[IRFunctionBlock] = field(default_factory=list)
     global_variables: List[IRTag] = field(default_factory=list)
     source_type: Optional[str] = None  # "rockwell", "openplc", etc.
+    fsm: Optional['IRStateMachine'] = None  # Derived FSM from control flow
 
 
 @dataclass
@@ -364,4 +365,49 @@ class FunctionBlock:
     outputs: List[Dict[str, str]] = field(default_factory=list)
     variables: List[Dict[str, str]] = field(default_factory=list)
     code: List[str] = field(default_factory=list)
+    description: Optional[str] = None
+
+
+# FSM-related data models
+@dataclass
+class FSMTransition:
+    """Represents a transition in a finite state machine."""
+    from_state: str
+    to_state: str
+    guard: Optional[str] = None
+    actions: List[str] = field(default_factory=list)
+    description: Optional[str] = None
+
+
+@dataclass
+class FSMState:
+    """Represents a state in a finite state machine."""
+    name: str
+    description: Optional[str] = None
+    is_initial: bool = False
+    is_final: bool = False
+    continuous_dynamics: Optional[str] = None  # For hybrid automata
+    invariants: List[str] = field(default_factory=list)
+
+
+@dataclass
+class IRStateMachine:
+    """Intermediate representation of a finite state machine."""
+    name: str
+    states: List[FSMState] = field(default_factory=list)
+    transitions: List[FSMTransition] = field(default_factory=list)
+    state_variable: Optional[str] = None
+    description: Optional[str] = None
+    source_type: Optional[str] = None  # "rockwell", "siemens", "fischertechnik_txt", etc.
+    is_implicit: bool = False  # True if inferred from boolean flags; False if explicit state variable
+
+
+@dataclass
+class CrossControllerFSM:
+    """Represents a composite FSM across multiple controllers."""
+    name: str
+    controllers: List[str] = field(default_factory=list)
+    linked_transitions: List[Dict[str, Any]] = field(default_factory=list)
+    shared_tags: List[str] = field(default_factory=list)
+    handshake_logic: List[Dict[str, Any]] = field(default_factory=list)
     description: Optional[str] = None 

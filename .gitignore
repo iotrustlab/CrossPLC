@@ -22,13 +22,9 @@ wheels/
 MANIFEST
 
 # Virtual environments
-.env
-.venv
-env/
 venv/
+env/
 ENV/
-env.bak/
-venv.bak/
 
 # IDE
 .vscode/
@@ -39,39 +35,97 @@ venv.bak/
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Project-specific generated files
-# Sampledata-specific analysis files
+# Task files (internal use only)
+*-task*.md
+fsm-task.md
+ftxt-support.md
+siemens-ld-support.md
+update-task*.md
+update.md
+
+# Test outputs and analysis files
+test_*.json
+*_analysis.json
+*_output.json
+*_test.json
+*_detailed.json
+*_clean.json
+*_v2.json
+*_v3.json
+*_complete.json
+*_multiple.json
+*_pairing.json
+*_interdependence.json
+*_semantic*.json
+*_fixed*.json
+*_debug*.json
+*_swat*.json
+*_plc*.json
+*_controller*.json
+*_p1*.json
+*_p2*.json
+*_p3*.json
+*_p6*.json
+*_mqtt*.json
+*_siemens*.json
+*_openplc*.json
+*_mixed*.json
+*_comprehensive*.json
+*_final*.json
+*_lad*.json
+*_tp*.json
+*_im*.json
+*_vgr*.json
+*_hbw*.json
+*_txt*.json
+*_real*.json
+*_config*.json
+*_generic*.json
+
+# FSM extraction outputs
+fsm_*.json
+fsm_*.dot
+fsm_*.svg
+fsm_*.graphml
+
+# Visualization outputs
+*_visualization.*
+
+# Temporary scripts
+extract_fsm_*.py
+test_*.py
+extract_*.py
+validate_*.py
+
+# External repositories
+txt_training_factory/
+plc_training_factory_24v/
+MQTT-Siemens-S7-1500/
+S7DataBlockParser/
+PLC-programing/
+
+# Generated documentation
 COMPREHENSIVE_TEST_SUMMARY.md
 L5K_OVERLAY_COMPARISON.md
-examples/IR_COMPARISON_SUMMARY.md
-examples/ir_comparison_p2.json
+tag_preservation_default_behavior.md
 
-# Generated output files from testing
-P*_output.st
-P*_roundtrip.L5X
-P*_with_overlay*.st
-P*_without_overlay.st
-output_*.st
-roundtrip_*.L5X
-roundtrip_test_output.st
-ir_roundtrip_output.L5X
-generated_project.L5X
+# Output directories
+out/
+enhanced_tag_preservation_output/
+final_tag_preservation_output/
+full_roundtrip_fidelity_output/
+tag_preservation_test_output/
 
-# Debug and test files
-debug_l5x.py
-test_st2l5x.py
-examples/sample_project.L5K
+# Logs
+*.log
 
-# Sampledata directory (contains large test files)
-sampledata/
-
-# Temporary files
-*.tmp
-*.temp 
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/ 
