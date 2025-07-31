@@ -2,12 +2,15 @@
 
 A modern Python 3 implementation for translating, analyzing, and unifying control logic across Rockwell, Siemens, and OpenPLC ecosystems. This project provides **complete round-trip conversion**, **IR validation**, **L5K overlay support**, **semantic analysis**, **control flow graph analysis**, and **multi-PLC analysis** across multiple vendor platforms.
 
+> **⚠️ Work in Progress**: The FSM extraction feature is currently under development and validation. The generic structural analysis approach is experimental and may require refinement for production use.
+
 ## Features
 
 ### Cross-Vendor Support
 - **Rockwell Automation**: Convert `.L5X` and `.L5K` files to/from Structured Text
 - **OpenPLC**: Parse and analyze OpenPLC `.st` files
 - **Siemens**: Parse and analyze Siemens `.scl`, `.udt`, and `.db` files
+- **Fischertechnik TXT**: Parse and analyze TXT C++ control logic (`.cpp`, `.h`, `.hpp`) files
 - **Unified IR**: Common Intermediate Representation across all platforms
 - **Mixed-Platform Analysis**: Analyze projects using multiple vendor platforms together
 
@@ -96,6 +99,33 @@ A modern Python 3 implementation for translating, analyzing, and unifying contro
 - **Source Type Tracking**: Identify "rockwell", "openplc", "siemens_lad" sources
 - **Project Extraction**: Handle compressed `.zap` files and extract program structure
 - **Structural IR Generation**: Create IR representation of LAD/FBD program structure
+
+### Fischertechnik TXT Integration
+- **TXT C++ Parser**: Parse Fischertechnik TXT C++ control logic (`.cpp`, `.h`, `.hpp`) into IR format
+- **Industrial Testbed Support**: Designed for Fischertechnik TXT training factory and similar industrial testbeds
+- **Motor Control Patterns**: Extract `setMotorOff()`, `setMotorLeft()`, `setMotorRight()`, `setSpeed()` patterns
+- **Sensor Reading Patterns**: Parse `isSwitchPressed()`, `read_sensor()`, `get_input()` function calls
+- **I/O Mapping**: Extract `pT->pTArea->ftX1in.uni[]` and `pT->pTArea->ftX1out.duty[]` patterns
+- **State Machine Analysis**: Detect FSM patterns with `FSM_TRANSITION()` macros and state enums
+- **Timing Control**: Parse `std::this_thread::sleep_for()` and other timing patterns
+- **Mixed-Platform Analysis**: Analyze Rockwell + OpenPLC + Siemens + TXT systems together
+- **Source Type Tracking**: Identify "rockwell", "openplc", "siemens", "fischertechnik_txt" sources
+- **Control Logic Extraction**: Extract control flow, assignments, function calls, and motor control operations
+
+### Finite State Machine (FSM) Extraction
+- **Hybrid Finite State Abstraction (HFSA)**: Extract FSMs from control flow IR using structural analysis
+- **Generic State Variable Detection**: Automatically identify state variables using control flow structure (variables in IF/CASE guards, assignments, output controls)
+- **Structural Analysis**: Infer FSMs based on control flow patterns, not hardcoded domain-specific patterns
+- **Cross-Domain Compatibility**: Works across any industrial system (water treatment, manufacturing, chemical plants, etc.)
+- **Configuration-Driven**: Optional YAML configuration for state variable hints and expected behavior
+- **Multi-Controller FSM**: Support for cross-controller FSM mapping and analysis
+- **FSM Visualization**: Generate DOT/GraphML files for FSM visualization
+- **JSON Export**: Export FSMs in structured JSON format for downstream analysis
+- **Guard Condition Extraction**: Parse IF statements, CASE statements, and control flow conditions
+- **Action Tracking**: Extract assignments, function calls, and control actions
+- **State Classification**: Identify initial, final, and intermediate states
+- **Cross-Platform Support**: Works with Rockwell L5X, Siemens SCL, and Fischertechnik TXT
+- **Validation Support**: Compare extracted FSMs against expected behavior from configuration
 
 ### Advanced Features
 - **Complete Round-Trip Conversion**: L5X ↔ ST ↔ L5X with validation
@@ -271,6 +301,32 @@ python -m crossplc.cli analyze-multi \
   --scl main.scl --scl data.db \
   -o detailed_siemens.json \
   --include tags,control_flow,controllers
+
+#### Fischertechnik TXT Integration
+```bash
+# Parse TXT C++ control logic
+python3 -m crossplc.cli parse-txt -i txt_training_factory/TxtSmartFactoryLib/src/TxtHighBayWarehouseRun.cpp -o txt_output.json -v
+
+# Multi-platform analysis with TXT files
+python3 -m crossplc.cli analyze-multi --cpp txt_training_factory/TxtSmartFactoryLib/src/TxtHighBayWarehouseRun.cpp -o multi_analysis.json -v
+
+# Extract FSM from TXT control logic (generic structural analysis)
+python3 extract_fsm_multi.py txt_training_factory/TxtSmartFactoryLib/src/TxtHighBayWarehouseRun.cpp fsm_output.json fsm_config.yaml
+
+# Visualize extracted FSM
+python3 visualize_fsm.py fsm_output.json fsm_visualization.svg
+```
+
+#### Generic FSM Extraction (Work in Progress)
+```bash
+# Extract FSM using structural analysis (no hardcoded patterns)
+python3 extract_fsm_multi.py sampledata/swatfiles fsm_swatfiles_output.json fsm_config.yaml
+
+# Extract FSM from any industrial system
+python3 extract_fsm_multi.py <input_file_or_dir> <output_file> [config_file]
+
+# Cross-domain FSM extraction
+python3 extract_fsm_multi.py examples/sample_txt_control.cpp fsm_manufacturing_output.json fsm_config.yaml
 ```
 
 #### Siemens LAD/FBD Integration
@@ -634,6 +690,55 @@ detailed = summary.get("detailed_components", {})
 for plc_name, components in detailed.items():
     if "siemens_lad" in plc_name.lower():
         print(f"Siemens LAD/FBD {plc_name}: {list(components.keys())} components")
+
+# TXT C++ Control Logic Analysis
+from crossplc.txt_parser import TXTParser
+from crossplc.project_ir import ProjectIR
+from pathlib import Path
+
+# Parse TXT C++ control logic
+parser = TXTParser()
+ir_project = parser.parse_txt_file("control_logic.cpp")
+
+# Access TXT-specific information
+print(f"Controller: {ir_project.controller.name}")
+print(f"Source type: {ir_project.source_type}")
+print(f"Tags: {len(ir_project.controller.tags)}")
+
+# Explore TXT control logic
+for program in ir_project.programs:
+    print(f"Program: {program.name}")
+    for routine in program.routines:
+        print(f"  Routine: {routine.name} ({routine.routine_type.value})")
+        print(f"  Content: {routine.content[:100]}...")
+
+# Analyze multiple TXT projects
+project_ir = ProjectIR.from_files([
+    Path("hbw_control.cpp"),    # High-Bay Warehouse
+    Path("vgr_control.cpp"),    # Vacuum Gripper Robot
+    Path("mpo_control.cpp")     # Multi-Processing Station
+])
+
+# Mixed platform analysis with TXT
+project_ir = ProjectIR.from_files([
+    Path("P1.L5X"),             # Rockwell
+    Path("controller.st"),       # OpenPLC
+    Path("main.scl"),           # Siemens SCL
+    Path("project.zap16"),      # Siemens LAD/FBD
+    Path("txt_control.cpp")     # Fischertechnik TXT
+])
+
+# Export mixed analysis with TXT components
+summary = project_ir.export_summary(
+    Path("mixed_platform_analysis.json"),
+    include_components=["tags", "control_flow", "controllers", "shared_tags"]
+)
+
+# Access TXT-specific components
+detailed = summary.get("detailed_components", {})
+for plc_name, components in detailed.items():
+    if "fischertechnik_txt" in plc_name.lower():
+        print(f"TXT {plc_name}: {list(components.keys())} components")
 ```
 ```
 
@@ -657,6 +762,8 @@ CrossPLC/
 │   ├── openplc_parser.py     # OpenPLC ST parser
 │   ├── siemens_scl_parser.py # Siemens SCL parser
 │   ├── siemens_lad_parser.py # Siemens LAD/FBD parser
+│   ├── txt_parser.py         # Fischertechnik TXT parser
+│   ├── fsm_extractor.py     # Generic FSM extraction (work in progress)
 │   ├── l5x2st.py            # L5X to ST converter
 │   ├── st2l5x.py            # ST to L5X converter
 │   └── cli.py               # Command-line interface
@@ -671,8 +778,11 @@ CrossPLC/
 │   ├── l5k_overlay_example.py # L5K overlay usage examples
 │   ├── validate_l5k_overlay_diff.py # Overlay difference analysis
 │   ├── validation_test.py   # Comprehensive validation
+│   ├── extract_fsm_multi.py # Multi-format FSM extraction script
+│   ├── visualize_fsm.py     # FSM visualization script
 │   ├── test_openplc.st      # OpenPLC test file
-│   └── test_siemens.scl     # Siemens SCL test file
+│   ├── test_siemens.scl     # Siemens SCL test file
+│   └── sample_txt_control.cpp # TXT C++ test file
 ├── tests/                    # Test suite
 │   ├── __init__.py
 │   ├── test_l5x2st.py       # Tests for L5X2ST converter

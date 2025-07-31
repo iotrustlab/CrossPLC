@@ -1,0 +1,53 @@
+# Generic FSM Configuration File
+# This file provides hints for FSM extraction from control flow IR
+
+controllers:
+  default:
+    # State variable to look for (optional)
+    state_var: "mode"
+    
+    # Physical variables for hybrid modeling (generic)
+    physical_vars: ["position", "velocity", "temperature", "pressure"]
+    
+    # Plant dynamics for hybrid model export (generic)
+    plant_dynamics:
+      ACTIVE: "position' = velocity"
+      INACTIVE: "position' = 0"
+      HEATING: "temperature' = heating_rate"
+      COOLING: "temperature' = -cooling_rate"
+    
+    # Explicit states to look for (generic)
+    explicit_states: ["IDLE", "ACTIVE", "INACTIVE", "FAULT"]
+    
+    # Transition hints (generic)
+    transition_hints:
+      ACTIVE: ["input_triggered", "output_enabled"]
+      INACTIVE: ["input_stopped", "output_disabled"]
+      HEATING: ["temperature_below_threshold", "heater_on"]
+      COOLING: ["temperature_above_threshold", "cooler_on"]
+
+  # Generic controller configurations
+  Controller1:
+    state_var: "mode"
+    physical_vars: ["position", "velocity"]
+    plant_dynamics:
+      ACTIVE: "position' = velocity"
+      INACTIVE: "position' = 0"
+    explicit_states: ["IDLE", "ACTIVE", "INACTIVE", "FAULT"]
+
+  Controller2:
+    state_var: "status"
+    physical_vars: ["pressure", "flow"]
+    plant_dynamics:
+      RUNNING: "pressure' = flow_rate"
+      STOPPED: "pressure' = 0"
+    explicit_states: ["IDLE", "RUNNING", "STOPPED", "FAULT"]
+
+  # Generic manufacturing controller
+  ManufacturingController:
+    state_var: "currentState"
+    physical_vars: ["position", "speed"]
+    plant_dynamics:
+      FETCH: "position' = speed"
+      STORE: "position' = -speed"
+    explicit_states: ["IDLE", "FETCH", "STORE", "FAULT"] 
